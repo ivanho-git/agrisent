@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌱 AGRI-SENTINEL — Complete Your Profile</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --primary: #2e7d32;
+            --primary-light: #4caf50;
+            --primary-dark: #1b5e20;
+            --accent: #ff9800;
+            --accent-dark: #f57c00;
+            --bg-light: #f1f8e9;
+            --bg-card: #ffffff;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666666;
+            --text-muted: #999999;
+            --border: #e0e0e0;
+            --success: #43a047;
+            --error: #e53935;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.12);
+            --shadow-lg: 0 8px 32px rgba(0,0,0,0.16);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(180deg, #e8f5e9 0%, #f1f8e9 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            padding: 16px 20px;
+            color: white;
+            text-align: center;
+            box-shadow: var(--shadow-md);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-logo {
+            font-size: 20px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        /* Container */
+        .container {
+            max-width: 560px;
+            margin: 0 auto;
+            padding: 24px 16px;
+        }
+
+        /* Welcome */
+        .welcome-section {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .welcome-icon { font-size: 48px; margin-bottom: 8px; }
+        .welcome-title { font-size: 22px; font-weight: 700; color: var(--primary); margin-bottom: 4px; }
+        .welcome-text { font-size: 14px; color: var(--text-secondary); }
+
+        /* Card */
+        .card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px dashed var(--border);
+        }
+
+        .card-icon { font-size: 24px; }
+        .card-title { font-size: 16px; font-weight: 600; color: var(--primary); }
+
+        /* Form */
+        .form-group { margin-bottom: 16px; }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+        }
+
+        .form-label .required { color: var(--error); }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 12px 14px;
+            font-size: 15px;
+            font-family: inherit;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-md);
+            background: #fafafa;
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: white;
+            box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        @media (max-width: 480px) { .form-row { grid-template-columns: 1fr; } }
+
+        /* Land Type Selector */
+        .type-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .type-option {
+            padding: 16px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-md);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #fafafa;
+        }
+
+        .type-option:hover { border-color: var(--primary-light); background: var(--bg-light); }
+        .type-option.selected { border-color: var(--primary); background: var(--bg-light); }
+        .type-option input { display: none; }
+        .type-icon { font-size: 32px; margin-bottom: 6px; }
+        .type-title { font-size: 14px; font-weight: 600; color: var(--primary); }
+        .type-desc { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+        /* Measurements */
+        .measurements-box {
+            background: #fff8e1;
+            border: 2px solid #ffe082;
+            border-radius: var(--radius-md);
+            padding: 16px;
+            margin-top: 12px;
+            display: none;
+        }
+
+        .measurements-box.show { display: block; }
+        .measurements-title { font-size: 13px; font-weight: 600; color: #f57c00; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+        .hint-text { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+        /* Button */
+        .btn {
+            width: 100%;
+            padding: 14px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            font-family: inherit;
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);
+        }
+
+        .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(46, 125, 50, 0.4); }
+        .btn:disabled { opacity: 0.7; cursor: not-allowed; }
+        .btn.loading .btn-text { display: none; }
+        .btn .spinner { display: none; }
+        .btn.loading .spinner { display: block; }
+
+        .spinner {
+            width: 20px; height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Alerts */
+        .alert {
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            margin-bottom: 16px;
+            font-size: 14px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert.show { display: flex; }
+        .alert-error { background: #ffebee; border: 1px solid #ef9a9a; color: var(--error); }
+        .alert-success { background: #e8f5e9; border: 1px solid #a5d6a7; color: var(--success); }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-logo">🌱 AGRI-SENTINEL</div>
+    </header>
+
+    <div class="container">
+        <div class="welcome-section">
+            <div class="welcome-icon">👨‍🌾</div>
+            <h1 class="welcome-title">Complete Your Profile</h1>
+            <p class="welcome-text">Tell us about your farm for personalized recommendations</p>
+        </div>
+
+        <div class="alert alert-error" id="errorAlert"><span>⚠️</span><span id="errorText"></span></div>
+        <div class="alert alert-success" id="successAlert"><span>✅</span><span id="successText"></span></div>
+
+        <form id="onboardingForm" onsubmit="handleSubmit(event)">
+            <!-- Personal Info -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-icon">👤</span>
+                    <span class="card-title">Personal Details</span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">🧑‍🌾 Your Name <span class="required">*</span></label>
+                    <input type="text" class="form-input" id="farmerName" placeholder="Enter your full name" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">🏘️ Village <span class="required">*</span></label>
+                        <input type="text" class="form-input" id="village" placeholder="Your village" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">🏛️ District <span class="required">*</span></label>
+                        <input type="text" class="form-input" id="district" placeholder="Your district" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">📍 State <span class="required">*</span></label>
+                    <select class="form-select" id="state" required>
+                        <option value="">-- Select State --</option>
+                        <option value="Andhra Pradesh">Andhra Pradesh</option>
+                        <option value="Bihar">Bihar</option>
+                        <option value="Gujarat">Gujarat</option>
+                        <option value="Haryana">Haryana</option>
+                        <option value="Karnataka">Karnataka</option>
+                        <option value="Kerala">Kerala</option>
+                        <option value="Madhya Pradesh">Madhya Pradesh</option>
+                        <option value="Maharashtra">Maharashtra</option>
+                        <option value="Punjab">Punjab</option>
+                        <option value="Rajasthan">Rajasthan</option>
+                        <option value="Tamil Nadu">Tamil Nadu</option>
+                        <option value="Telangana">Telangana</option>
+                        <option value="Uttar Pradesh">Uttar Pradesh</option>
+                        <option value="West Bengal">West Bengal</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Land Info -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-icon">🌾</span>
+                    <span class="card-title">Land Information</span>
+                </div>
+
+                <label class="form-label">🏡 Type of Land <span class="required">*</span></label>
+                <div class="type-grid">
+                    <label class="type-option" id="fieldOption" onclick="selectType('Field')">
+                        <input type="radio" name="usage_type" value="Field">
+                        <div class="type-icon">🌾</div>
+                        <div class="type-title">Field</div>
+                        <div class="type-desc">Large farm land</div>
+                    </label>
+                    <label class="type-option" id="gardenOption" onclick="selectType('Garden')">
+                        <input type="radio" name="usage_type" value="Garden">
+                        <div class="type-icon">🏡</div>
+                        <div class="type-title">Garden</div>
+                        <div class="type-desc">Small plot</div>
+                    </label>
+                </div>
+
+                <div class="measurements-box" id="acresBox">
+                    <div class="measurements-title">📐 Field Measurements</div>
+                    <div class="form-group">
+                        <label class="form-label">🌿 Total Area (Acres) <span class="required">*</span></label>
+                        <input type="number" class="form-input" id="acres" placeholder="e.g., 2.5" step="0.1" min="0.1">
+                        <p class="hint-text">1 acre = 4,047 sq meters</p>
+                    </div>
+
+                    <!-- GPS Location -->
+                    <div class="form-group" style="margin-top: 16px;">
+                        <label class="form-label">📍 Field Location <span class="required">*</span></label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <button type="button" class="btn" id="gpsBtn" onclick="getGPSLocation()" style="width: auto; padding: 10px 16px; font-size: 14px; background: linear-gradient(135deg, #1976d2 0%, #42a5f5 100%);">
+                                <span id="gpsBtnText">📍 Get My Location</span>
+                                <div class="spinner" id="gpsSpinner" style="display: none;"></div>
+                            </button>
+                            <span id="gpsStatus" style="font-size: 13px; color: var(--text-muted);"></span>
+                        </div>
+                        <input type="hidden" id="latitude">
+                        <input type="hidden" id="longitude">
+                        <div id="gpsInfo" style="display: none; margin-top: 10px; padding: 12px; background: #e3f2fd; border-radius: 8px; border: 1px solid #90caf9;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <div style="font-size: 12px; color: #1565c0; font-weight: 600;">✅ Location Captured</div>
+                                    <div id="gpsCoords" style="font-size: 11px; color: #666; margin-top: 4px;"></div>
+                                </div>
+                                <button type="button" onclick="clearGPS()" style="background: none; border: none; color: #e53935; cursor: pointer; font-size: 18px;">✕</button>
+                            </div>
+                        </div>
+                        <p class="hint-text">We use your location to create a map of your field for satellite monitoring</p>
+                    </div>
+                </div>
+
+                <div class="measurements-box" id="dimensionsBox">
+                    <div class="measurements-title">📏 Garden Measurements</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Length (m) <span class="required">*</span></label>
+                            <input type="number" class="form-input" id="landLength" placeholder="e.g., 50" step="0.1" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Width (m) <span class="required">*</span></label>
+                            <input type="number" class="form-input" id="landWidth" placeholder="e.g., 30" step="0.1" min="1">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Crop Info -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-icon">🌱</span>
+                    <span class="card-title">Crop Details</span>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">🌿 Main Crop <span class="required">*</span></label>
+                        <select class="form-select" id="cropName" required>
+                            <option value="">-- Select --</option>
+                            <option value="Rice">🌾 Rice</option>
+                            <option value="Wheat">🌾 Wheat</option>
+                            <option value="Maize">🌽 Maize</option>
+                            <option value="Cotton">🌿 Cotton</option>
+                            <option value="Sugarcane">🎋 Sugarcane</option>
+                            <option value="Tomato">🍅 Tomato</option>
+                            <option value="Potato">🥔 Potato</option>
+                            <option value="Onion">🧅 Onion</option>
+                            <option value="Chilli">🌶️ Chilli</option>
+                            <option value="Groundnut">🥜 Groundnut</option>
+                            <option value="Soybean">🫘 Soybean</option>
+                            <option value="Apple">🍎 Apple</option>
+                            <option value="Mango">🥭 Mango</option>
+                            <option value="Banana">🍌 Banana</option>
+                            <option value="Grapes">🍇 Grapes</option>
+                            <option value="Other">📦 Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">💧 Watering</label>
+                        <select class="form-select" id="wateringFrequency">
+                            <option value="">-- Optional --</option>
+                            <option value="Daily">Daily</option>
+                            <option value="Every 2-3 days">Every 2-3 days</option>
+                            <option value="Weekly">Weekly</option>
+                            <option value="Drip Irrigation">Drip Irrigation</option>
+                            <option value="Rain-fed">Rain-fed only</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="submitBtn">
+                <span class="btn-text">✅ Save & Continue</span>
+                <div class="spinner"></div>
+            </button>
+        </form>
+    </div>
+
+    <script>
+        let selectedType = null;
+
+        function selectType(type) {
+            selectedType = type;
+            document.getElementById('fieldOption').classList.toggle('selected', type === 'Field');
+            document.getElementById('gardenOption').classList.toggle('selected', type === 'Garden');
+            document.getElementById('acresBox').classList.toggle('show', type === 'Field');
+            document.getElementById('dimensionsBox').classList.toggle('show', type === 'Garden');
+        }
+
+        function showError(msg) {
+            document.getElementById('errorText').textContent = msg;
+            document.getElementById('errorAlert').classList.add('show');
+            document.getElementById('successAlert').classList.remove('show');
+            document.getElementById('errorAlert').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function showSuccess(msg) {
+            document.getElementById('successText').textContent = msg;
+            document.getElementById('successAlert').classList.add('show');
+            document.getElementById('errorAlert').classList.remove('show');
+        }
+
+        // GPS Location Functions
+        function getGPSLocation() {
+            const btn = document.getElementById('gpsBtn');
+            const btnText = document.getElementById('gpsBtnText');
+            const spinner = document.getElementById('gpsSpinner');
+            const status = document.getElementById('gpsStatus');
+
+            if (!navigator.geolocation) {
+                status.innerHTML = '<span style="color: #e53935;">❌ GPS not supported</span>';
+                return;
+            }
+
+            btnText.style.display = 'none';
+            spinner.style.display = 'block';
+            status.innerHTML = '<span style="color: #1976d2;">📡 Getting location...</span>';
+            btn.disabled = true;
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    const accuracy = Math.round(position.coords.accuracy);
+
+                    document.getElementById('latitude').value = lat;
+                    document.getElementById('longitude').value = lon;
+
+                    document.getElementById('gpsInfo').style.display = 'block';
+                    document.getElementById('gpsCoords').innerHTML = `Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)} (±${accuracy}m)`;
+
+                    status.innerHTML = '<span style="color: #2e7d32;">✅ Location captured!</span>';
+                    btnText.textContent = '🔄 Update Location';
+                    btnText.style.display = 'inline';
+                    spinner.style.display = 'none';
+                    btn.disabled = false;
+                },
+                (error) => {
+                    let errorMsg = 'Location error';
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED: errorMsg = 'Permission denied. Please allow location access.'; break;
+                        case error.POSITION_UNAVAILABLE: errorMsg = 'Location unavailable. Try again.'; break;
+                        case error.TIMEOUT: errorMsg = 'Request timeout. Try again.'; break;
+                    }
+                    status.innerHTML = `<span style="color: #e53935;">❌ ${errorMsg}</span>`;
+                    btnText.textContent = '📍 Retry';
+                    btnText.style.display = 'inline';
+                    spinner.style.display = 'none';
+                    btn.disabled = false;
+                },
+                { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+            );
+        }
+
+        function clearGPS() {
+            document.getElementById('latitude').value = '';
+            document.getElementById('longitude').value = '';
+            document.getElementById('gpsInfo').style.display = 'none';
+            document.getElementById('gpsStatus').innerHTML = '';
+            document.getElementById('gpsBtnText').textContent = '📍 Get My Location';
+        }
+
+        async function handleSubmit(e) {
+            e.preventDefault();
+            document.getElementById('errorAlert').classList.remove('show');
+            document.getElementById('successAlert').classList.remove('show');
+
+            if (!selectedType) { showError('Please select your land type'); return; }
+
+            const data = {
+                farmer_name: document.getElementById('farmerName').value.trim(),
+                village: document.getElementById('village').value.trim(),
+                district: document.getElementById('district').value.trim(),
+                state: document.getElementById('state').value,
+                usage_type: selectedType,
+                crop_name: document.getElementById('cropName').value,
+                watering_frequency: document.getElementById('wateringFrequency').value || null
+            };
+
+            if (selectedType === 'Field') {
+                const acres = document.getElementById('acres').value;
+                if (!acres || parseFloat(acres) <= 0) { showError('Please enter valid acres'); return; }
+                data.acres = parseFloat(acres);
+
+                // GPS is required for Field type
+                const lat = document.getElementById('latitude').value;
+                const lon = document.getElementById('longitude').value;
+                if (!lat || !lon) {
+                    showError('Please capture your field location using the GPS button');
+                    return;
+                }
+                data.latitude = parseFloat(lat);
+                data.longitude = parseFloat(lon);
+            } else {
+                const len = document.getElementById('landLength').value;
+                const wid = document.getElementById('landWidth').value;
+                if (!len || !wid || parseFloat(len) <= 0 || parseFloat(wid) <= 0) { showError('Please enter valid dimensions'); return; }
+                data.land_length = parseFloat(len);
+                data.land_width = parseFloat(wid);
+            }
+
+            const btn = document.getElementById('submitBtn');
+            btn.classList.add('loading');
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/onboarding', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+
+                if (res.ok && result.success) {
+                    showSuccess(result.message + ' Redirecting...');
+                    setTimeout(() => window.location.href = result.redirect, 1500);
+                } else {
+                    throw new Error(result.detail || 'Something went wrong');
+                }
+            } catch (err) {
+                showError(err.message);
+                btn.classList.remove('loading');
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

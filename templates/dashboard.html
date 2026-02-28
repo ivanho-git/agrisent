@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌱 AGRI-SENTINEL — Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        :root{
+            --primary:#2e7d32;--primary-light:#43a047;--primary-lighter:#66bb6a;
+            --primary-bg:#e8f5e9;
+            --accent:#ff9800;--accent-dark:#ef6c00;--accent-bg:#fff3e0;
+            --bg:#f4f6f8;--card:#ffffff;
+            --text:#1a2332;--text2:#4a5568;--text3:#94a3b8;
+            --border:#e2e8f0;
+            --red:#ef4444;--red-bg:#fef2f2;
+            --blue:#3b82f6;
+            --green:#22c55e;
+            --shadow-sm:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+            --shadow-md:0 4px 6px rgba(0,0,0,.05),0 2px 4px rgba(0,0,0,.04);
+            --shadow-lg:0 10px 15px rgba(0,0,0,.06),0 4px 6px rgba(0,0,0,.04);
+            --r-sm:8px;--r-md:12px;--r-lg:16px;--r-xl:20px;
+        }
+        body{font-family:'Inter',sans-serif;background:var(--bg);min-height:100vh;color:var(--text)}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+
+        .header{background:linear-gradient(135deg,var(--primary) 0%,var(--primary-light) 60%,var(--primary-lighter) 100%);padding:0 24px;height:60px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(0,0,0,.15)}
+        .logo{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none;font-size:17px;font-weight:800;letter-spacing:-.3px}
+        .logo-dot{width:8px;height:8px;background:#22c55e;border-radius:50%;animation:pulse 2s infinite}
+        .nav-links{display:flex;gap:6px}
+        .nav-btn{padding:7px 14px;font-size:12px;font-weight:600;font-family:inherit;border:1.5px solid rgba(255,255,255,.4);border-radius:20px;cursor:pointer;transition:all .2s;text-decoration:none;display:flex;align-items:center;gap:5px;background:rgba(255,255,255,.08);color:#fff}
+        .nav-btn:hover{background:rgba(255,255,255,.2);border-color:#fff}
+        .nav-btn.filled{background:#fff;color:var(--primary);border-color:#fff}
+        .nav-btn.filled:hover{background:var(--accent);border-color:var(--accent);color:#fff}
+        .nav-btn.danger{border-color:rgba(255,200,200,.5);color:rgba(255,200,200,.9)}
+        .nav-btn.danger:hover{background:rgba(255,200,200,.2)}
+        .container{max-width:1140px;margin:0 auto;padding:20px 16px 40px}
+        .welcome{background:linear-gradient(135deg,var(--primary) 0%,#388e3c 50%,var(--primary-lighter) 100%);border-radius:var(--r-xl);padding:28px 32px;color:#fff;display:flex;align-items:center;gap:24px;margin-bottom:24px;box-shadow:0 8px 30px rgba(46,125,50,.25);position:relative;overflow:hidden;animation:fadeUp .5s ease}
+        .welcome::after{content:'';position:absolute;top:-40px;right:-40px;width:180px;height:180px;background:rgba(255,255,255,.06);border-radius:50%}
+        .welcome-avatar{font-size:52px;flex-shrink:0}
+        .welcome h1{font-size:22px;font-weight:700;margin-bottom:2px}
+        .welcome p{font-size:14px;opacity:.9}
+        .welcome-badge{display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,.15);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:600;margin-top:8px}
+        @media(max-width:600px){.welcome{flex-direction:column;text-align:center;padding:24px 20px}.welcome-avatar{font-size:44px}}
+        .grid{display:grid;grid-template-columns:1fr 340px;gap:20px}
+        @media(max-width:920px){.grid{grid-template-columns:1fr}}
+        .main,.side{display:flex;flex-direction:column;gap:18px}
+        .card{background:var(--card);border-radius:var(--r-lg);padding:20px;box-shadow:var(--shadow-sm);border:1px solid var(--border);animation:fadeUp .5s ease both}
+        .card-h{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+        .card-h .ico{font-size:20px}.card-h .ttl{font-size:14px;font-weight:700}.card-h .badge{margin-left:auto;font-size:10px;font-weight:600;background:var(--primary-bg);color:var(--primary);padding:3px 10px;border-radius:20px}
+        .farm-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+        @media(max-width:500px){.farm-grid{grid-template-columns:1fr}}
+        .farm-item{background:var(--bg);border-radius:var(--r-md);padding:14px 16px;border:1px solid var(--border);transition:all .2s}
+        .farm-item:hover{border-color:var(--primary)}
+        .farm-item .lbl{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+        .farm-item .val{font-size:16px;font-weight:700;color:var(--primary)}
+        .farm-item .sub{font-size:11px;color:var(--text2);margin-top:2px}
+        .actions{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+        @media(max-width:600px){.actions{grid-template-columns:1fr 1fr}}
+        .act{background:var(--card);border:2px solid var(--border);border-radius:var(--r-md);padding:20px 14px;text-align:center;cursor:pointer;transition:all .25s;text-decoration:none;color:inherit}
+        .act:hover{border-color:var(--primary);transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+        .act.featured{background:var(--primary-bg);border-color:var(--primary)}
+        .act .ico{font-size:32px;margin-bottom:8px}.act .t{font-size:13px;font-weight:700;color:var(--primary)}.act .d{font-size:11px;color:var(--text3);margin-top:3px}
+        .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+        .stat{background:var(--card);border:1px solid var(--border);border-radius:var(--r-md);padding:16px;text-align:center;transition:all .2s}
+        .stat:hover{box-shadow:var(--shadow-md);transform:translateY(-2px)}
+        .stat .num{font-size:28px;font-weight:800;line-height:1}.stat .lbl{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-top:6px}
+        .disease-alert{background:var(--red-bg);border:1.5px solid #fecaca;border-radius:var(--r-lg);padding:18px 20px;display:none;animation:fadeUp .4s ease}
+        .disease-alert.show{display:flex;align-items:center;gap:16px}
+        .disease-alert .da-ico{font-size:42px;flex-shrink:0}
+        .disease-alert .name{font-size:17px;font-weight:700;color:var(--red)}
+        .disease-alert .conf{font-size:12px;color:var(--text2);margin-top:2px}
+        .disease-alert .link{display:block;margin-top:6px;font-size:12px;font-weight:600;color:var(--accent-dark);text-decoration:none}
+        .pill-btn{background:var(--primary);color:#fff;padding:8px 16px;border-radius:var(--r-sm);font-size:12px;font-weight:600;text-decoration:none;flex-shrink:0;transition:all .2s}
+        .pill-btn:hover{background:var(--primary-light)}
+        .community{background:linear-gradient(135deg,#fff8e1 0%,#f1f8e9 100%);border:2px solid var(--accent);border-radius:var(--r-lg);padding:24px;text-align:center}
+        .community .emoji{font-size:36px;margin-bottom:12px}
+        .community h3{font-size:16px;font-weight:700;margin-bottom:4px}
+        .community p{font-size:13px;color:var(--text2);margin-bottom:16px}
+        .forum-btn{display:inline-flex;align-items:center;gap:8px;padding:12px 28px;background:linear-gradient(135deg,#ff9800,#ef6c00);color:#fff;border-radius:var(--r-md);font-size:14px;font-weight:700;text-decoration:none;font-family:inherit;box-shadow:0 4px 15px rgba(255,152,0,.35);transition:all .25s}
+        .forum-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(255,152,0,.45)}
+        .weather{background:linear-gradient(135deg,#1565c0 0%,#1e88e5 50%,#42a5f5 100%);color:#fff;border-radius:var(--r-lg);padding:20px;box-shadow:var(--shadow-md);position:relative;overflow:hidden}
+        .weather::after{content:'';position:absolute;top:-30px;right:-30px;width:100px;height:100px;background:rgba(255,255,255,.06);border-radius:50%}
+        .weather .wh{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+        .weather .wh .wt{font-size:13px;font-weight:700}.weather .wh .loc{font-size:11px;opacity:.85}
+        .weather .wm{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+        .weather .wm img{width:60px;height:60px;filter:drop-shadow(0 2px 8px rgba(0,0,0,.2))}
+        .weather .wm .temp{font-size:44px;font-weight:800;line-height:1}
+        .weather .wm .desc{font-size:13px;opacity:.9;margin-top:2px;font-weight:500}
+        .weather .wd{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding-top:12px;border-top:1px solid rgba(255,255,255,.15)}
+        .weather .wd .wi{text-align:center;padding:8px 4px;background:rgba(255,255,255,.08);border-radius:var(--r-sm)}
+        .weather .wd .wi .i{font-size:16px}.weather .wd .wi .v{font-size:13px;font-weight:700;margin-top:2px}.weather .wd .wi .l{font-size:9px;opacity:.7;margin-top:1px;text-transform:uppercase;letter-spacing:.5px}
+        .weather .wload{text-align:center;padding:30px 10px;font-size:13px;opacity:.8}
+        .profile-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+        .profile-item{background:var(--bg);padding:10px 12px;border-radius:var(--r-sm);border:1px solid var(--border)}
+        .profile-item .lbl{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
+        .profile-item .val{font-size:12px;font-weight:600;color:var(--text)}
+        .map-wrap{border-radius:var(--r-md);overflow:hidden;border:2px solid var(--border)}
+        .map-label{margin-top:8px;font-size:11px;color:var(--text3);text-align:center}
+        .spinner{width:24px;height:24px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto}
+        @media(max-width:600px){.header{padding:0 12px;height:54px}.nav-links{gap:4px}.nav-btn{padding:5px 10px;font-size:11px}.logo{font-size:15px}.container{padding:14px 10px 30px}.stat .num{font-size:22px}}
+    </style>
+</head>
+<body>
+    <header class="header">
+        <a href="/dashboard" class="logo">🌱 AGRI-SENTINEL <span class="logo-dot"></span></a>
+        <div class="nav-links">
+            <a href="/" class="nav-btn filled">🔬 Scan</a>
+            <a href="/history" class="nav-btn">📜 History</a>
+            <a href="https://agrobit-forum.vercel.app/" target="_blank" class="nav-btn">💬 Forum</a>
+            <button class="nav-btn danger" onclick="logout()">🚪</button>
+        </div>
+    </header>
+    <div class="container">
+        <div class="welcome">
+            <div class="welcome-avatar">👨‍🌾</div>
+            <div>
+                <h1>Namaste, {{ profile.farmer_name if profile else 'Farmer' }}! 🙏</h1>
+                <p>Your smart farming command center</p>
+                <div class="welcome-badge"><span class="logo-dot" style="width:6px;height:6px"></span>{{ profile.village if profile else '' }}{% if profile and profile.district %}, {{ profile.district }}{% endif %}</div>
+            </div>
+        </div>
+        <div class="grid">
+            <div class="main">
+                <div class="card" style="animation-delay:.1s">
+                    <div class="card-h"><span class="ico">🏡</span><span class="ttl">Farm Overview</span><span class="badge">{{ profile.usage_type if profile else 'N/A' }}</span></div>
+                    <div class="farm-grid">
+                        <div class="farm-item"><div class="lbl">📍 Location</div><div class="val">{{ profile.village if profile else 'N/A' }}</div><div class="sub">{{ profile.district if profile else '' }}{% if profile and profile.district %}, {% endif %}{{ profile.state if profile else '' }}</div></div>
+                        <div class="farm-item"><div class="lbl">🌾 Main Crop</div><div class="val">{{ profile.crop_name if profile else 'N/A' }}</div><div class="sub">Primary cultivation</div></div>
+                        <div class="farm-item"><div class="lbl">📐 Land Size</div>{% if profile and profile.usage_type == 'Field' and profile.acres %}<div class="val">{{ profile.acres }} Acres</div><div class="sub">Agricultural Field</div>{% elif profile and profile.usage_type == 'Garden' and profile.land_length %}<div class="val">{{ profile.land_length }}m × {{ profile.land_width }}m</div><div class="sub">Garden Plot</div>{% else %}<div class="val">N/A</div><div class="sub">Not specified</div>{% endif %}</div>
+                        <div class="farm-item"><div class="lbl">💧 Irrigation</div><div class="val">{{ profile.watering_frequency if profile and profile.watering_frequency else 'Not set' }}</div><div class="sub">Watering method</div></div>
+                    </div>
+                </div>
+                <div class="card" style="animation-delay:.15s">
+                    <div class="card-h"><span class="ico">⚡</span><span class="ttl">Quick Actions</span></div>
+                    <div class="actions">
+                        <a href="/" class="act featured"><div class="ico">🔬</div><div class="t">Scan Crop</div><div class="d">AI disease detection</div></a>
+                        <a href="/history" class="act"><div class="ico">📊</div><div class="t">History</div><div class="d">Past scans & results</div></a>
+                        {% if profile and profile.usage_type == 'Field' %}{% if profile.latitude and profile.longitude %}<div class="act" onclick="registerFieldPolygon()" id="satelliteCard"><div class="ico">🛰️</div><div class="t">Satellite</div><div class="d">Field monitoring</div></div>{% else %}<div class="act" onclick="captureFieldLocation()" id="addLocationCard"><div class="ico">📍</div><div class="t">Add Location</div><div class="d">Enable satellite</div></div>{% endif %}{% else %}<a href="https://agrobit-forum.vercel.app/" target="_blank" class="act"><div class="ico">💬</div><div class="t">Forum</div><div class="d">Ask fellow farmers</div></a>{% endif %}
+                    </div>
+                </div>
+                {% if profile and profile.latitude and profile.longitude %}
+                <div class="card" style="animation-delay:.2s">
+                    <div class="card-h"><span class="ico">🗺️</span><span class="ttl">Field Location</span></div>
+                    <div class="map-wrap"><iframe width="100%" height="180" frameborder="0" scrolling="no" src="https://www.openstreetmap.org/export/embed.html?bbox={{ profile.longitude - 0.008 }}%2C{{ profile.latitude - 0.008 }}%2C{{ profile.longitude + 0.008 }}%2C{{ profile.latitude + 0.008 }}&layer=mapnik&marker={{ profile.latitude }}%2C{{ profile.longitude }}" style="border:0;display:block"></iframe></div>
+                    <div class="map-label">📍 {{ profile.latitude | round(4) }}°N, {{ profile.longitude | round(4) }}°E</div>
+                </div>
+                {% elif profile and profile.usage_type == 'Field' %}
+                <div class="card" id="locationPromptCard" style="text-align:center;padding:30px 20px">
+                    <div style="font-size:48px;margin-bottom:12px">🛰️</div>
+                    <h3 style="font-size:16px;font-weight:700;margin-bottom:6px">Enable Satellite Features</h3>
+                    <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Add your GPS location to unlock satellite imagery, NDVI data & soil monitoring.</p>
+                    <button onclick="captureFieldLocation()" style="padding:12px 24px;background:var(--primary);color:#fff;border:none;border-radius:var(--r-md);font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">📍 Capture My Location</button>
+                </div>
+                {% endif %}
+                <div class="stats" style="animation-delay:.25s">
+                    <div class="stat"><div class="num" style="color:var(--blue)" id="scanCount">–</div><div class="lbl">Total Scans</div></div>
+                    <div class="stat"><div class="num" style="color:var(--red)" id="diseaseCount">–</div><div class="lbl">Diseases</div></div>
+                    <div class="stat"><div class="num" style="color:var(--green)" id="healthyCount">–</div><div class="lbl">Healthy</div></div>
+                </div>
+                <div class="disease-alert" id="recentDiseaseCard">
+                    <div class="da-ico">🦠</div>
+                    <div style="flex:1"><div class="name" id="recentDiseaseName"></div><div class="conf" id="recentDiseaseConf"></div><a href="https://agrobit-forum.vercel.app/" target="_blank" class="link">💬 Discuss with fellow farmers →</a></div>
+                    <a href="/" class="pill-btn">🔬 Scan Again</a>
+                </div>
+                <div class="community" style="animation-delay:.3s">
+                    <div class="emoji">🗣️ 👩‍🌾 👨‍🌾</div>
+                    <h3>Farmer Community Forum</h3>
+                    <p>Share crop problems, discover solutions, and learn from experienced farmers across India</p>
+                    <a href="https://agrobit-forum.vercel.app/" target="_blank" class="forum-btn">🌾 Join the Forum →</a>
+                </div>
+            </div>
+            <div class="side">
+                <div class="weather" id="weatherCard">
+                    <div class="wload"><div class="spinner" style="border-color:rgba(255,255,255,.2);border-top-color:#fff;margin-bottom:10px"></div>Loading weather for {{ profile.village if profile and profile.village else 'your area' }}...</div>
+                </div>
+                {% if profile and profile.usage_type == 'Field' and profile.latitude %}
+                <div class="card" id="satelliteMonitorCard" style="display:none">
+                    <div class="card-h"><span class="ico">🛰️</span><span class="ttl">Satellite Data</span></div>
+                    <div id="satelliteContent"><div style="text-align:center;padding:16px;color:var(--text3)"><div class="spinner"></div><p style="font-size:12px;margin-top:10px">Connecting...</p></div></div>
+                </div>
+                {% endif %}
+                <div class="card">
+                    <div class="card-h"><span class="ico">👤</span><span class="ttl">Profile</span></div>
+                    <div class="profile-grid">
+                        <div class="profile-item"><div class="lbl">📱 Phone</div><div class="val">{{ user.phone_number if user else 'N/A' }}</div></div>
+                        <div class="profile-item"><div class="lbl">🏡 Type</div><div class="val">{{ profile.usage_type if profile else 'N/A' }}</div></div>
+                        <div class="profile-item"><div class="lbl">🗓️ Joined</div><div class="val">{{ user.created_at[:10] if user and user.created_at else 'N/A' }}</div></div>
+                        <div class="profile-item"><div class="lbl">✅ Status</div><div class="val" style="color:var(--green)">Active</div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        async function logout(){try{const r=await fetch('/api/logout',{method:'POST',headers:{'Content-Type':'application/json'}});const d=await r.json();if(d.success)window.location.href=d.redirect}catch(e){window.location.href='/login'}}
+
+        function renderWeather(w,card){
+            card.innerHTML=`<div class="wh"><span class="wt">☀️ Weather</span><span class="loc">📍 ${w.city}</span></div><div class="wm"><img src="${w.icon_url}" alt="${w.description}"><div><div class="temp">${w.temperature}°</div><div class="desc">${w.description}</div></div></div><div class="wd"><div class="wi"><div class="i">💧</div><div class="v">${w.humidity}%</div><div class="l">Humidity</div></div><div class="wi"><div class="i">💨</div><div class="v">${w.wind_speed} km/h</div><div class="l">Wind</div></div><div class="wi"><div class="i">☁️</div><div class="v">${w.clouds}%</div><div class="l">Clouds</div></div></div>`;
+        }
+
+        async function loadWeather(){
+            const card=document.getElementById('weatherCard');
+            const village='{{ profile.village if profile and profile.village else "" }}';
+            const district='{{ profile.district if profile and profile.district else "" }}';
+            const state='{{ profile.state if profile and profile.state else "" }}';
+            const attempts=[village,district,state].filter(Boolean);
+            for(const city of attempts){
+                try{const res=await fetch(`/api/weather?city=${encodeURIComponent(city)}`);const data=await res.json();
+                    if(data.success&&data.weather){renderWeather(data.weather,card);return}}catch(e){}
+            }
+            try{const res=await fetch('/api/weather');const data=await res.json();if(data.success&&data.weather){renderWeather(data.weather,card);return}}catch(e){}
+            card.innerHTML='<div class="wload">⚠️ Weather unavailable</div>';
+        }
+
+        async function loadStats(){
+            try{const r=await fetch('/api/stats');const d=await r.json();
+                if(d.success){document.getElementById('scanCount').textContent=d.total;document.getElementById('diseaseCount').textContent=d.diseased;document.getElementById('healthyCount').textContent=d.healthy;
+                    if(d.recent_disease){document.getElementById('recentDiseaseCard').classList.add('show');document.getElementById('recentDiseaseName').textContent=d.recent_disease.disease;document.getElementById('recentDiseaseConf').textContent='Confidence: '+Math.round(d.recent_disease.confidence*100)+'%'}
+                }}catch(e){document.getElementById('scanCount').textContent='0';document.getElementById('diseaseCount').textContent='0';document.getElementById('healthyCount').textContent='0'}
+        }
+
+        async function registerFieldPolygon(){
+            const card=document.getElementById('satelliteCard');if(!card)return;const orig=card.innerHTML;card.innerHTML='<div class="ico">⏳</div><div class="t">Registering...</div>';card.style.pointerEvents='none';
+            try{const r=await fetch('/api/agromonitoring/create-polygon',{method:'POST'});const d=await r.json();
+                if(d.success){card.innerHTML='<div class="ico">✅</div><div class="t">Registered</div><div class="d">Active</div>';card.onclick=null;const mc=document.getElementById('satelliteMonitorCard');if(mc){mc.style.display='block';loadSatelliteData()}}
+                else{card.innerHTML='<div class="ico">⚠️</div><div class="t">Error</div><div class="d">'+(d.error||'Failed')+'</div>';setTimeout(()=>{card.innerHTML=orig;card.style.pointerEvents='auto'},3000)}
+            }catch(e){card.innerHTML=orig;card.style.pointerEvents='auto'}
+        }
+
+        async function loadSatelliteData(){
+            const c=document.getElementById('satelliteContent');if(!c)return;
+            c.innerHTML='<div style="text-align:center;padding:16px"><div class="spinner"></div><p style="font-size:11px;color:var(--text3);margin-top:8px">Loading...</p></div>';
+            try{const[ndviR,soilR]=await Promise.all([fetch('/api/agromonitoring/ndvi'),fetch('/api/agromonitoring/soil')]);const[ndvi,soil]=[await ndviR.json(),await soilR.json()];let h='';
+                if(ndvi.success&&ndvi.ndvi){const v=ndvi.ndvi.data?(ndvi.ndvi.data.mean||0).toFixed(2):'N/A';const s=v>0.6?'Healthy':v>0.3?'Moderate':'Low';const clr=v>0.6?'var(--green)':v>0.3?'var(--accent)':'var(--red)';
+                    h+=`<div style="background:var(--primary-bg);padding:12px;border-radius:var(--r-sm);margin-bottom:8px"><div style="font-size:10px;color:var(--text3);font-weight:600">🌿 NDVI</div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px"><span style="font-size:22px;font-weight:800;color:${clr}">${v}</span><span style="font-size:11px;padding:3px 10px;background:${clr};color:#fff;border-radius:12px;font-weight:600">${s}</span></div></div>`}
+                if(soil.success&&soil.soil){const s=soil.soil;h+=`<div style="background:var(--accent-bg);padding:12px;border-radius:var(--r-sm)"><div style="font-size:10px;color:var(--text3);font-weight:600">🌡️ Soil</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;font-size:12px"><div><b>Temp:</b> ${s.t0?(s.t0-273.15).toFixed(1)+'°C':'N/A'}</div><div><b>Moisture:</b> ${s.moisture?(s.moisture*100).toFixed(0)+'%':'N/A'}</div></div></div>`}
+                c.innerHTML=h||'<div style="text-align:center;padding:16px;color:var(--text3)"><div style="font-size:24px">📡</div><p style="font-size:11px;margin-top:6px">Data available within 24h</p></div>';
+            }catch(e){c.innerHTML='<div style="text-align:center;padding:16px;color:var(--red)">⚠️ Failed to load</div>'}
+        }
+
+        async function captureFieldLocation(){
+            const card=document.getElementById('addLocationCard')||document.getElementById('locationPromptCard');
+            if(!navigator.geolocation){alert('❌ GPS not supported');return}
+            if(card)card.innerHTML='<div style="text-align:center;padding:24px"><div class="spinner"></div><p style="font-size:13px;color:var(--primary);margin-top:10px">📡 Getting location...</p></div>';
+            navigator.geolocation.getCurrentPosition(
+                async(pos)=>{try{const r=await fetch('/api/update-location',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({latitude:pos.coords.latitude,longitude:pos.coords.longitude})});const d=await r.json();if(d.success){alert('✅ Location saved!');window.location.reload()}else{alert('❌ '+d.error);window.location.reload()}}catch(e){alert('❌ '+e.message);window.location.reload()}},
+                (err)=>{alert('❌ '+(err.code===1?'Permission denied':err.code===2?'Unavailable':'Timeout'));window.location.reload()},
+                {enableHighAccuracy:true,timeout:15000,maximumAge:0});
+        }
+
+        loadWeather();
+        loadStats();
+    </script>
+</body>
+</html>

@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌱 AGRI-SENTINEL — Farmer Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --primary: #2e7d32;
+            --primary-light: #4caf50;
+            --primary-dark: #1b5e20;
+            --accent: #ff9800;
+            --accent-dark: #f57c00;
+            --bg-light: #f1f8e9;
+            --bg-card: #ffffff;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666666;
+            --text-muted: #999999;
+            --border: #e0e0e0;
+            --success: #43a047;
+            --error: #e53935;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.12);
+            --shadow-lg: 0 8px 32px rgba(0,0,0,0.16);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 20px;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: var(--text-primary);
+        }
+
+        .page-container {
+            width: 100%;
+            max-width: 420px;
+        }
+
+        /* Logo */
+        .logo-section {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .logo-icon {
+            font-size: 56px;
+            margin-bottom: 8px;
+            filter: drop-shadow(0 4px 8px rgba(46, 125, 50, 0.3));
+        }
+
+        .logo-text {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+            letter-spacing: -0.5px;
+        }
+
+        .logo-tagline {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* Card */
+        .card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .card-header {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .card-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .card-subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 20px;
+            background: var(--accent);
+            color: white;
+        }
+
+        /* Form */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-prefix {
+            padding: 12px 14px;
+            background: #f5f5f5;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .form-input {
+            flex: 1;
+            padding: 12px 16px;
+            font-size: 16px;
+            font-family: inherit;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-md);
+            background: #fafafa;
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+            letter-spacing: 1px;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            background: white;
+            box-shadow: 0 0 0 4px rgba(46, 125, 50, 0.1);
+        }
+
+        .form-input::placeholder {
+            color: var(--text-muted);
+            letter-spacing: 0;
+        }
+
+        /* Button */
+        .btn {
+            width: 100%;
+            padding: 14px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            font-family: inherit;
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(46, 125, 50, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn.loading .btn-text { display: none; }
+        .btn .spinner { display: none; }
+        .btn.loading .spinner { display: block; }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Messages */
+        .alert {
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert.show { display: flex; }
+
+        .alert-error {
+            background: #ffebee;
+            border: 1px solid #ef9a9a;
+            color: var(--error);
+        }
+
+        .alert-success {
+            background: #e8f5e9;
+            border: 1px solid #a5d6a7;
+            color: var(--success);
+        }
+
+        /* Features */
+        .features {
+            margin-top: 28px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .features-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 14px;
+        }
+
+        .features-list {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .feature-tag {
+            padding: 6px 12px;
+            background: var(--bg-light);
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--primary);
+        }
+
+        /* Language selector */
+        .lang-selector {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+        }
+
+        .lang-select {
+            padding: 8px 12px;
+            font-family: inherit;
+            font-size: 12px;
+            border: 2px solid var(--primary);
+            border-radius: var(--radius-sm);
+            background: white;
+            color: var(--primary);
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <select class="lang-select lang-selector" id="langSelect" onchange="changeLanguage()">
+        <option value="en">🇺🇸 English</option>
+        <option value="hi">🇮🇳 हिंदी</option>
+        <option value="ta">தமிழ்</option>
+        <option value="te">తెలుగు</option>
+        <option value="kn">ಕನ್ನಡ</option>
+        <option value="mr">मराठी</option>
+    </select>
+
+    <div class="page-container">
+        <div class="logo-section">
+            <div class="logo-icon">🌱</div>
+            <div class="logo-text">AGRI-SENTINEL</div>
+            <div class="logo-tagline" data-translate="tagline">AI-Powered Crop Protection</div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h1 class="card-title">
+                    <span data-translate="welcome">Welcome Farmer</span>
+                    <span class="badge">No OTP</span>
+                </h1>
+                <p class="card-subtitle" data-translate="loginDesc">Enter your phone number to get started</p>
+            </div>
+
+            <div class="alert alert-error" id="errorAlert">
+                <span>⚠️</span>
+                <span id="errorText"></span>
+            </div>
+            <div class="alert alert-success" id="successAlert">
+                <span>✅</span>
+                <span id="successText"></span>
+            </div>
+
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label class="form-label" data-translate="phoneLabel">📱 Phone Number</label>
+                    <div class="input-group">
+                        <span class="input-prefix">+91</span>
+                        <input
+                            type="tel"
+                            class="form-input"
+                            id="phoneInput"
+                            placeholder="9876543210"
+                            maxlength="10"
+                            pattern="[0-9]{10}"
+                            required
+                            autocomplete="tel"
+                        >
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="loginBtn">
+                    <span class="btn-text" data-translate="loginBtn">🚜 Start Farming</span>
+                    <div class="spinner"></div>
+                </button>
+            </form>
+
+            <div class="features">
+                <div class="features-title">What you can do</div>
+                <div class="features-list">
+                    <span class="feature-tag">🔬 Disease Detection</span>
+                    <span class="feature-tag">💊 Treatment Plans</span>
+                    <span class="feature-tag">🤖 Smart Spraying</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const translations = {
+            en: { tagline: "AI-Powered Crop Protection", welcome: "Welcome Farmer", loginDesc: "Enter your phone number to get started", phoneLabel: "📱 Phone Number", loginBtn: "🚜 Start Farming" },
+            hi: { tagline: "AI-संचालित फसल सुरक्षा", welcome: "स्वागत है किसान", loginDesc: "शुरू करने के लिए अपना फोन नंबर दर्ज करें", phoneLabel: "📱 फोन नंबर", loginBtn: "🚜 खेती शुरू करें" },
+            ta: { tagline: "AI-இயக்கப்படும் பயிர் பாதுகாப்பு", welcome: "வரவேற்கிறோம் விவசாயி", loginDesc: "தொடங்க உங்கள் தொலைபேசி எண்ணை உள்ளிடவும்", phoneLabel: "📱 தொலைபேசி எண்", loginBtn: "🚜 விவசாயம் தொடங்கு" },
+            te: { tagline: "AI-ఆధారిత పంట రక్షణ", welcome: "స్వాగతం రైతు", loginDesc: "ప్రారంభించడానికి మీ ఫోన్ నంబర్ నమోదు చేయండి", phoneLabel: "📱 ఫోన్ నంబర్", loginBtn: "🚜 వ్యవసాయం ప్రారంభించండి" },
+            kn: { tagline: "AI-ಚಾಲಿತ ಬೆಳೆ ರಕ್ಷಣೆ", welcome: "ಸ್ವಾಗತ ರೈತ", loginDesc: "ಪ್ರಾರಂಭಿಸಲು ನಿಮ್ಮ ಫೋನ್ ಸಂಖ್ಯೆಯನ್ನು ನಮೂದಿಸಿ", phoneLabel: "📱 ಫೋನ್ ಸಂಖ್ಯೆ", loginBtn: "🚜 ಕೃಷಿ ಪ್ರಾರಂಭಿಸಿ" },
+            mr: { tagline: "AI-चालित पीक संरक्षण", welcome: "स्वागत शेतकरी", loginDesc: "सुरू करण्यासाठी तुमचा फोन नंबर टाका", phoneLabel: "📱 फोन नंबर", loginBtn: "🚜 शेती सुरू करा" }
+        };
+
+        function changeLanguage() {
+            const lang = document.getElementById('langSelect').value;
+            const trans = translations[lang] || translations.en;
+            document.querySelectorAll('[data-translate]').forEach(el => {
+                const key = el.getAttribute('data-translate');
+                if (trans[key]) el.textContent = trans[key];
+            });
+            localStorage.setItem('agri_lang', lang);
+        }
+
+        const savedLang = localStorage.getItem('agri_lang');
+        if (savedLang) { document.getElementById('langSelect').value = savedLang; changeLanguage(); }
+
+        function showError(msg) {
+            document.getElementById('errorText').textContent = msg;
+            document.getElementById('errorAlert').classList.add('show');
+            document.getElementById('successAlert').classList.remove('show');
+        }
+
+        function showSuccess(msg) {
+            document.getElementById('successText').textContent = msg;
+            document.getElementById('successAlert').classList.add('show');
+            document.getElementById('errorAlert').classList.remove('show');
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const phone = document.getElementById('phoneInput').value;
+            const btn = document.getElementById('loginBtn');
+
+            document.getElementById('errorAlert').classList.remove('show');
+            document.getElementById('successAlert').classList.remove('show');
+
+            if (!/^[0-9]{10}$/.test(phone)) { showError('Please enter a valid 10-digit phone number'); return; }
+
+            btn.classList.add('loading');
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone_number: phone })
+                });
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    showSuccess(data.message + ' Redirecting...');
+                    setTimeout(() => window.location.href = data.redirect, 1000);
+                } else {
+                    throw new Error(data.detail || 'Login failed');
+                }
+            } catch (err) {
+                showError(err.message || 'Something went wrong');
+                btn.classList.remove('loading');
+                btn.disabled = false;
+            }
+        }
+
+        document.getElementById('phoneInput').addEventListener('input', function() {
+            this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,2092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌱 AGRI-SENTINEL — Crop Disease Detection</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Orbitron:wght@400;500;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #2e7d32; --primary-light: #4caf50; --primary-dark: #1b5e20;
+            --accent: #ff9800; --accent-light: #ffb74d;
+            --secondary: #e53935; --info: #1976d2;
+            --bg-page: #f5f5f5; --bg-card: #ffffff; --bg-light: #f1f8e9;
+            --dark: #1a1a1a; --dark-card: #2d2d2d; --dark-surface: #3d3d3d;
+            --text: #1a1a1a; --text-light: #ffffff; --text-muted: #666666;
+            --border: #e0e0e0;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.12);
+            --shadow-lg: 0 8px 32px rgba(0,0,0,0.16);
+            --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px;
+            --glow: 0 0 20px rgba(46, 125, 50, 0.3);
+        }
+        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
+        @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 10px rgba(46, 125, 50, 0.3); } 50% { box-shadow: 0 0 25px rgba(46, 125, 50, 0.5); } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideInRight { from { opacity: 0; transform: translateX(-50px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        body { font-family: 'Poppins', sans-serif; background: var(--bg-page); color: var(--text); overflow-x: hidden; }
+
+        /* New Unified Header */
+        .nav {
+            position: fixed; top: 0; left: 0; width: 100%; padding: 12px 20px;
+            display: flex; justify-content: space-between; align-items: center; z-index: 1000;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            box-shadow: var(--shadow-md);
+        }
+        .logo {
+            font-family: 'Poppins', sans-serif; font-size: 18px; font-weight: 700;
+            color: white; text-decoration: none;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .nav-right { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .nav-link {
+            font-family: 'Poppins', sans-serif;
+            background: white; border: 2px solid white; color: var(--primary);
+            padding: 8px 16px; font-size: 13px; font-weight: 600;
+            cursor: pointer; transition: all 0.2s; text-decoration: none;
+            border-radius: 20px; display: flex; align-items: center; gap: 6px;
+        }
+        .nav-link:hover { background: var(--accent); border-color: var(--accent); color: white; }
+        .nav-link.outline { background: transparent; color: white; }
+        .nav-link.outline:hover { background: white; color: var(--primary); }
+        .status-indicator {
+            display: flex; align-items: center; gap: 8px; padding: 6px 12px;
+            background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.5);
+            border-radius: 20px; font-size: 11px; font-weight: 600; color: white;
+        }
+        .status-dot { width: 8px; height: 8px; background: #4caf50; border-radius: 50%; animation: pulse-glow 2s infinite; }
+
+        /* Language Selector - Updated */
+        .language-selector { display: flex; align-items: center; gap: 8px; }
+        .lang-select {
+            background: white; border: 2px solid white; color: var(--primary);
+            padding: 6px 10px; font-family: 'Poppins', sans-serif; font-size: 12px;
+            cursor: pointer; border-radius: var(--radius-sm); font-weight: 600;
+        }
+        .lang-select:focus { outline: none; }
+        .voice-btn {
+            background: rgba(255,255,255,0.2); border: 2px solid white; color: white;
+            padding: 6px 12px; font-size: 14px; cursor: pointer; transition: all 0.2s;
+            display: flex; align-items: center; gap: 6px; border-radius: var(--radius-sm);
+        }
+        .voice-btn:hover { background: white; color: var(--primary); }
+        .voice-btn.speaking { background: var(--accent); border-color: var(--accent); }
+        .voice-btn span { font-family: 'Poppins', sans-serif; font-size: 11px; font-weight: 600; }
+        .speak-btn {
+            background: var(--accent); border: none; color: white;
+            padding: 8px 14px; font-size: 14px; cursor: pointer;
+            border-radius: var(--radius-sm); margin-left: 10px;
+        }
+        .speak-btn:hover { background: var(--accent-light); }
+
+        /* Risk Analysis Panel Styles */
+        .risk-analysis-btn { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%) !important; box-shadow: var(--shadow-md) !important; }
+        .risk-analysis-btn:hover:not(:disabled) { box-shadow: var(--shadow-lg) !important; transform: translateY(-2px); }
+
+        #riskAnalysisPanel { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); z-index: 5000; overflow-y: auto; animation: fadeInUp 0.4s ease; }
+        #riskAnalysisPanel.active { display: flex; justify-content: center; align-items: flex-start; padding: 40px 20px; }
+        .risk-panel-content { background: var(--bg-card); border: 2px solid var(--primary); border-radius: var(--radius-lg); max-width: 900px; width: 100%; padding: 40px; position: relative; box-shadow: var(--shadow-lg); }
+        .risk-panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid var(--border); }
+        .risk-panel-title { font-family: 'Poppins', sans-serif; font-size: 24px; font-weight: 700; color: var(--primary); }
+        .risk-close-btn { background: transparent; border: 2px solid var(--secondary); color: var(--secondary); width: 40px; height: 40px; font-size: 20px; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+        .risk-close-btn:hover { background: var(--secondary); color: white; transform: rotate(90deg); }
+
+        /* Risk Meter / Gauge */
+        .risk-meter-container { text-align: center; margin-bottom: 40px; padding: 30px; background: var(--bg-light); border: 2px solid var(--border); border-radius: var(--radius-md); }
+        .risk-gauge { position: relative; width: 250px; height: 125px; margin: 0 auto 20px; overflow: hidden; }
+        .risk-gauge-bg { position: absolute; width: 250px; height: 250px; border-radius: 50%; background: conic-gradient(from 180deg, var(--primary) 0deg, var(--accent) 90deg, var(--secondary) 180deg); clip-path: polygon(0 0, 100% 0, 100% 50%, 0 50%); opacity: 0.3; }
+        .risk-gauge-fill { position: absolute; width: 250px; height: 250px; border-radius: 50%; background: conic-gradient(from 180deg, var(--primary) 0deg, var(--accent) 90deg, var(--secondary) 180deg); clip-path: polygon(0 0, 100% 0, 100% 50%, 0 50%); transform-origin: center center; transition: all 1s ease; }
+        .risk-gauge-mask { position: absolute; width: 180px; height: 180px; background: var(--bg-light); border-radius: 50%; top: 35px; left: 35px; }
+        .risk-gauge-needle { position: absolute; width: 4px; height: 80px; background: linear-gradient(to top, var(--text) 0%, transparent 100%); bottom: 0; left: 50%; transform-origin: bottom center; transform: translateX(-50%) rotate(-90deg); transition: transform 1s ease; z-index: 10; }
+        .risk-gauge-center { position: absolute; width: 20px; height: 20px; background: var(--text); border-radius: 50%; bottom: -10px; left: 50%; transform: translateX(-50%); z-index: 11; box-shadow: var(--shadow-sm); }
+        .risk-level-label { font-family: 'Poppins', sans-serif; font-size: 32px; font-weight: 700; margin-top: 10px; }
+        .risk-level-label.low { color: var(--primary); }
+        .risk-level-label.medium { color: var(--accent); }
+        .risk-level-label.high { color: #ff6b35; }
+        .risk-level-label.critical { color: var(--secondary); animation: pulse-glow 0.5s infinite; }
+        .risk-speed { font-family: 'Poppins', sans-serif; font-size: 14px; color: var(--text-muted); margin-top: 10px; }
+
+        /* Data Comparison Grid */
+        .risk-data-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+        .risk-data-card { background: var(--bg-light); border: 2px solid var(--border); border-radius: var(--radius-md); padding: 20px; transition: all 0.3s; }
+        .risk-data-card:hover { border-color: var(--primary); box-shadow: var(--shadow-sm); }
+        .risk-data-card h4 { font-family: 'Poppins', sans-serif; font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-bottom: 15px; }
+        .risk-comparison { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+        .risk-value-box { flex: 1; text-align: center; padding: 15px; background: white; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+        .risk-value-label { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; }
+        .risk-value-num { font-family: 'Poppins', sans-serif; font-size: 24px; font-weight: 700; }
+        .risk-value-num.current { color: var(--info); }
+        .risk-value-num.ideal { color: var(--primary); }
+        .risk-value-num.danger { color: var(--secondary); }
+        .risk-vs { font-family: 'Poppins', sans-serif; font-size: 14px; color: var(--text-muted); }
+        .risk-match-indicator { margin-top: 10px; padding: 8px; font-size: 11px; font-weight: 600; text-align: center; border-radius: var(--radius-sm); }
+        .risk-match-indicator.good { background: #e8f5e9; border: 1px solid var(--primary); color: var(--primary); }
+        .risk-match-indicator.warning { background: #fff3e0; border: 1px solid var(--accent); color: var(--accent); }
+        .risk-match-indicator.danger { background: #ffebee; border: 1px solid var(--secondary); color: var(--secondary); }
+
+        /* Prediction Alert Box */
+        .risk-prediction { background: var(--bg-light); border: 2px solid; padding: 25px; margin-top: 20px; border-radius: var(--radius-md); }
+        .risk-prediction.critical { border-color: var(--secondary); background: #ffebee; }
+        .risk-prediction.high { border-color: #ff6b35; background: #fff3e0; }
+        .risk-prediction.medium { border-color: var(--accent); background: #fff8e1; }
+        .risk-prediction.low { border-color: var(--primary); background: #e8f5e9; }
+        .risk-prediction-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
+        .risk-prediction-icon { font-size: 32px; }
+        .risk-prediction-title { font-family: 'Poppins', sans-serif; font-size: 16px; font-weight: 700; text-transform: uppercase; }
+        .risk-prediction-title.critical { color: var(--secondary); }
+        .risk-prediction-title.high { color: #ff6b35; }
+        .risk-prediction-title.medium { color: var(--accent); }
+        .risk-prediction-title.low { color: var(--primary); }
+        .risk-prediction-text { font-size: 14px; line-height: 1.8; color: var(--text); }
+        .risk-prediction-text strong { color: var(--primary); }
+
+        /* Risk Factors List */
+        .risk-factors { margin-top: 25px; }
+        .risk-factors h4 { font-family: 'Poppins', sans-serif; font-size: 14px; font-weight: 600; color: var(--primary); margin-bottom: 15px; }
+        .risk-factor-item { display: flex; align-items: center; gap: 12px; padding: 12px 15px; background: white; border-left: 3px solid; margin-bottom: 8px; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+        .risk-factor-item.positive { border-color: var(--secondary); }
+        .risk-factor-item.negative { border-color: var(--primary); }
+        .risk-factor-icon { font-size: 18px; }
+        .risk-factor-text { font-size: 13px; color: var(--text-muted); }
+
+        @media (max-width: 768px) { .risk-data-grid { grid-template-columns: 1fr; } .risk-gauge { width: 200px; height: 100px; } .risk-gauge-bg, .risk-gauge-fill { width: 200px; height: 200px; } .risk-gauge-mask { width: 140px; height: 140px; top: 30px; left: 30px; } .risk-gauge-needle { height: 60px; } }
+
+        /* Disease Progression Simulator (Timeline) Styles */
+        .timeline-container { margin-top: 40px; background: var(--bg-light); border: 2px solid var(--border); border-radius: var(--radius-lg); padding: 30px; }
+        .timeline-header { display: flex; align-items: center; gap: 15px; margin-bottom: 25px; }
+        .timeline-title { font-family: 'Poppins', sans-serif; font-size: 18px; font-weight: 700; color: var(--primary); }
+        .timeline-subtitle { font-size: 12px; color: var(--text-muted); }
+
+        .timeline-content { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: start; }
+        @media (max-width: 900px) { .timeline-content { grid-template-columns: 1fr; } }
+
+        .timeline-image-section { position: relative; }
+        .timeline-image-wrapper { position: relative; border: 3px solid var(--primary); border-radius: var(--radius-md); overflow: hidden; background: white; }
+        .timeline-image { width: 100%; height: auto; display: block; transition: filter 0.5s ease; }
+        .timeline-day-overlay { position: absolute; top: 15px; right: 15px; background: rgba(0, 0, 0, 0.8); border-radius: var(--radius-sm); padding: 10px 20px; font-family: 'Poppins', sans-serif; font-size: 16px; font-weight: 700; color: white; }
+        .timeline-decay-overlay { position: absolute; bottom: 0; left: 0; right: 0; height: 0%; background: linear-gradient(to top, rgba(139, 69, 19, 0.8) 0%, rgba(229, 57, 53, 0.3) 50%, transparent 100%); transition: height 0.5s ease; pointer-events: none; }
+
+        .timeline-controls { padding: 20px; background: white; border: 2px solid var(--border); border-radius: var(--radius-md); }
+        .timeline-slider-container { margin-bottom: 25px; }
+        .timeline-slider-label { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .timeline-slider-label span { font-family: 'Poppins', sans-serif; font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
+        .timeline-slider-value { font-family: 'Poppins', sans-serif; font-size: 24px; font-weight: 700; color: var(--primary); }
+
+        .timeline-slider { -webkit-appearance: none; appearance: none; width: 100%; height: 16px; background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 50%, var(--secondary) 100%); border-radius: 8px; outline: none; cursor: pointer; }
+        .timeline-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 28px; height: 28px; background: white; border: 3px solid var(--primary); border-radius: 50%; cursor: pointer; box-shadow: var(--shadow-md); transition: all 0.3s; }
+        .timeline-slider::-webkit-slider-thumb:hover { transform: scale(1.15); }
+        .timeline-slider::-moz-range-thumb { width: 28px; height: 28px; background: white; border: 3px solid var(--primary); border-radius: 50%; cursor: pointer; box-shadow: var(--shadow-md); }
+
+        .timeline-day-markers { display: flex; justify-content: space-between; margin-top: 10px; padding: 0 5px; }
+        .timeline-day-markers span { font-family: 'Poppins', sans-serif; font-size: 11px; color: var(--text-muted); }
+
+        .timeline-status { padding: 20px; text-align: center; border: 3px solid; transition: all 0.5s ease; margin-top: 20px; border-radius: var(--radius-md); }
+        .timeline-status.recoverable { background: #e8f5e9; border-color: var(--primary); }
+        .timeline-status.severe { background: #fff3e0; border-color: var(--accent); }
+        .timeline-status.total-loss { background: #ffebee; border-color: var(--secondary); animation: pulse-glow 0.5s infinite; }
+
+        .timeline-status-icon { font-size: 40px; margin-bottom: 10px; }
+        .timeline-status-text { font-family: 'Poppins', sans-serif; font-size: 18px; font-weight: 700; text-transform: uppercase; margin-bottom: 10px; }
+        .timeline-status-text.recoverable { color: var(--primary); }
+        .timeline-status-text.severe { color: var(--accent); }
+        .timeline-status-text.total-loss { color: var(--secondary); }
+        .timeline-status-desc { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+
+        .timeline-urgency { margin-top: 20px; padding: 15px; background: #ffebee; border: 2px dashed var(--secondary); border-radius: var(--radius-md); display: none; }
+        .timeline-urgency.active { display: block; }
+        .timeline-urgency-text { font-family: 'Poppins', sans-serif; font-size: 14px; font-weight: 600; color: var(--secondary); text-align: center; }
+
+        .timeline-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 20px; }
+        .timeline-stat { background: var(--bg-light); padding: 15px 10px; text-align: center; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+        .timeline-stat-value { font-family: 'Poppins', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 5px; }
+        .timeline-stat-label { font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
+
+        @keyframes decay-pulse { 0%, 100% { opacity: 0.8; } 50% { opacity: 1; } }
+
+        /* Hero Section - Updated to match theme */
+        .hero { position: relative; height: 100vh; display: flex; align-items: center; justify-content: center; overflow: hidden; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%); }
+        .hero-grid { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px); background-size: 60px 60px; animation: float 6s ease-in-out infinite; }
+        .hero-content { position: relative; z-index: 10; text-align: center; animation: fadeInUp 1s ease; }
+        .hero-title { font-family: 'Poppins', sans-serif; font-size: clamp(40px, 8vw, 80px); font-weight: 700; margin-bottom: 20px; color: white; text-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+        .hero-subtitle { font-family: 'Poppins', sans-serif; font-size: clamp(14px, 2vw, 20px); color: rgba(255,255,255,0.9); margin-bottom: 15px; font-weight: 500; }
+        .hero-tagline { font-family: 'Poppins', sans-serif; font-size: clamp(12px, 1.5vw, 16px); color: white; margin-bottom: 40px; padding: 12px 24px; border: 2px solid rgba(255,255,255,0.5); display: inline-block; background: rgba(255,255,255,0.1); border-radius: var(--radius-md); }
+        .cta-button { font-family: 'Poppins', sans-serif; background: white; color: var(--primary); border: none; padding: 18px 40px; font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.3s; box-shadow: var(--shadow-lg); border-radius: var(--radius-md); }
+        .cta-button:hover { transform: translateY(-3px); background: var(--accent); color: white; }
+
+        .container { position: relative; max-width: 1200px; margin: 0 auto; padding: 100px 20px; z-index: 10; }
+        .phase-section { background: var(--bg-card); border: 2px solid var(--border); border-radius: var(--radius-lg); padding: 30px; margin-bottom: 30px; position: relative; overflow: hidden; transition: all 0.5s; box-shadow: var(--shadow-sm); }
+        .phase-section.locked { opacity: 0.5; pointer-events: none; }
+        .phase-section.locked::after { content: '🔒'; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 60px; opacity: 0.2; }
+        .phase-header { display: flex; align-items: center; gap: 20px; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 2px solid var(--border); }
+        .phase-number { width: 50px; height: 50px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%); color: white; display: flex; align-items: center; justify-content: center; font-family: 'Poppins', sans-serif; font-size: 22px; font-weight: 700; border-radius: 50%; box-shadow: var(--shadow-md); }
+        .phase-title { font-family: 'Poppins', sans-serif; font-size: clamp(18px, 3vw, 24px); font-weight: 700; color: var(--primary); }
+
+        .upload-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px; }
+        @media (max-width: 768px) { .upload-grid { grid-template-columns: 1fr; } }
+        .upload-box { border: 3px dashed var(--border); border-radius: var(--radius-lg); padding: 40px 30px; text-align: center; background: var(--bg-light); cursor: pointer; transition: all 0.3s; }
+        .upload-box:hover { border-color: var(--primary); background: #e8f5e9; }
+        .upload-icon { font-size: 48px; margin-bottom: 15px; animation: float 3s ease-in-out infinite; }
+        .upload-text { font-family: 'Poppins', sans-serif; font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+        .upload-subtext { font-size: 13px; color: var(--text-muted); }
+        .image-preview { display: none; margin-top: 25px; text-align: center; }
+        .image-preview.active { display: block; }
+        .preview-image { max-width: 100%; max-height: 400px; border: 3px solid var(--primary); border-radius: var(--radius-md); box-shadow: var(--shadow-md); }
+
+        .form-group { margin-bottom: 20px; }
+        .form-label { font-family: 'Poppins', sans-serif; font-size: 13px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 8px; }
+        .form-select, .form-input { width: 100%; background: var(--bg-light); border: 2px solid var(--border); color: var(--text); padding: 14px 18px; font-family: 'Poppins', sans-serif; font-size: 14px; transition: all 0.3s; border-radius: var(--radius-md); }
+        .form-select:focus, .form-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1); }
+        .other-plant-input { display: none; }
+        .other-plant-input.active { display: block; }
+
+        .action-btn { font-family: 'Poppins', sans-serif; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%); color: white; border: none; padding: 16px 32px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3); width: 100%; border-radius: var(--radius-md); }
+        .action-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(46, 125, 50, 0.4); }
+        .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .action-btn.danger { background: linear-gradient(135deg, var(--secondary) 0%, #ff6666 100%); box-shadow: 0 4px 12px rgba(229, 57, 53, 0.3); }
+
+        .loading-spinner { display: none; text-align: center; padding: 50px 30px; }
+        .loading-spinner.active { display: block; }
+        .spinner { width: 50px; height: 50px; border: 4px solid var(--border); border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+        .loading-text { font-family: 'Poppins', sans-serif; font-size: 16px; font-weight: 600; color: var(--primary); }
+
+        .diagnosis-results { display: none; margin-top: 30px; }
+        .diagnosis-results.active { display: block; }
+        .diagnosis-header { text-align: center; margin-bottom: 30px; padding: 30px; background: var(--bg-light); border: 2px solid var(--border); border-radius: var(--radius-lg); }
+        .diagnosis-category { display: inline-block; padding: 12px 24px; font-family: 'Poppins', sans-serif; font-size: 14px; font-weight: 700; margin-bottom: 15px; border-radius: var(--radius-md); }
+        .diagnosis-category.confirmed { background: var(--primary); color: white; }
+        .diagnosis-category.probable { background: var(--accent); color: white; }
+        .diagnosis-category.insufficient { background: var(--secondary); color: white; }
+        .disease-name { font-family: 'Poppins', sans-serif; font-size: clamp(20px, 3vw, 28px); font-weight: 700; color: var(--primary); margin-bottom: 15px; }
+        .confidence-badge { display: inline-block; padding: 8px 16px; font-family: 'Poppins', sans-serif; font-size: 12px; font-weight: 600; border: 2px solid; border-radius: 20px; }
+        .confidence-high { background: #e8f5e9; border-color: var(--primary); color: var(--primary); }
+        .confidence-medium { background: #fff3e0; border-color: var(--accent); color: var(--accent); }
+        .confidence-low { background: #ffebee; border-color: var(--secondary); color: var(--secondary); }
+        .source-info { margin-top: 20px; padding: 12px 20px; background: #e3f2fd; border: 2px solid var(--info); border-radius: var(--radius-md); font-family: 'Poppins', sans-serif; font-size: 12px; font-weight: 600; color: var(--info); }
+
+        .diagnosis-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 25px; }
+        @media (max-width: 768px) { .diagnosis-comparison { grid-template-columns: 1fr; } }
+        .diagnosis-card { background: var(--bg-light); border: 2px solid var(--border); border-radius: var(--radius-md); padding: 25px; transition: all 0.3s; }
+        .diagnosis-card:hover { border-color: var(--primary); box-shadow: var(--shadow-md); }
+        .diagnosis-card h3 { font-family: 'Poppins', sans-serif; font-size: 15px; font-weight: 600; color: var(--primary); margin-bottom: 15px; }
+        .confidence-bar-container { margin: 15px 0; }
+        .confidence-bar-label { font-family: 'Poppins', sans-serif; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; }
+        .confidence-bar { height: 24px; background: var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+        .confidence-bar-fill { height: 100%; background: linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 100%); display: flex; align-items: center; justify-content: center; font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 12px; color: white; transition: width 0.8s; border-radius: var(--radius-sm); }
+        .symptoms-list { list-style: none; padding: 0; }
+        .symptoms-list li { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px; color: var(--text-muted); }
+
+        .alert { padding: 18px 22px; border-left: 4px solid; margin-bottom: 25px; display: flex; gap: 15px; align-items: start; background: var(--bg-light); border-radius: 0 var(--radius-md) var(--radius-md) 0; }
+        .alert-icon { font-size: 24px; flex-shrink: 0; }
+        .alert-info { background: #e3f2fd; border-color: var(--info); color: var(--info); }
+        .alert-content { flex: 1; }
+        .alert-content strong { font-family: 'Poppins', sans-serif; font-weight: 600; display: block; margin-bottom: 5px; }
+
+        .env-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .env-card { background: var(--dark-surface); border: 2px solid rgba(0, 255, 136, 0.2); padding: 25px; text-align: center; transition: all 0.4s; }
+        .env-card:hover { border-color: var(--primary); box-shadow: 0 10px 40px rgba(0, 255, 136, 0.3); transform: translateY(-5px); }
+        .env-icon { font-size: 48px; margin-bottom: 15px; }
+        .env-label { font-family: 'Orbitron', sans-serif; font-size: 11px; letter-spacing: 2px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px; }
+        .env-value { font-family: 'Orbitron', sans-serif; font-size: 36px; font-weight: 900; color: var(--primary); text-shadow: 0 0 20px rgba(0, 255, 136, 0.5); }
+
+        .inventory-section { margin-bottom: 30px; }
+        .inventory-title { font-family: 'Orbitron', sans-serif; font-size: 20px; letter-spacing: 2px; color: var(--primary); text-transform: uppercase; margin-bottom: 20px; }
+        .inventory-item { margin-bottom: 20px; }
+        .inventory-label { display: flex; justify-content: space-between; margin-bottom: 8px; font-family: 'Orbitron', sans-serif; font-size: 12px; letter-spacing: 1px; color: var(--text-muted); }
+        .inventory-bar { height: 20px; background: rgba(0, 255, 136, 0.1); border: 1px solid rgba(0, 255, 136, 0.3); overflow: hidden; }
+        .inventory-bar-fill { height: 100%; background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%); transition: width 0.8s; box-shadow: 0 0 15px rgba(0, 255, 136, 0.6); }
+
+        .recipe-card { display: none; background: linear-gradient(135deg, rgba(0, 255, 136, 0.03) 0%, rgba(0, 212, 255, 0.03) 100%); border: 2px solid rgba(0, 255, 136, 0.3); padding: 30px; margin-top: 30px; }
+        .recipe-card.active { display: block; }
+        .recipe-title { font-family: 'Orbitron', sans-serif; font-size: 24px; font-weight: 700; letter-spacing: 3px; color: var(--primary); text-transform: uppercase; margin-bottom: 25px; }
+        .recipe-ingredients { list-style: none; padding: 0; margin-bottom: 25px; }
+        .recipe-ingredients li { padding: 15px; background: var(--dark-surface); border-left: 4px solid var(--primary); margin-bottom: 10px; font-family: 'Space Mono', monospace; font-size: 14px; }
+        .recipe-steps { background: rgba(0, 212, 255, 0.05); border: 2px solid rgba(0, 212, 255, 0.3); padding: 20px; margin-bottom: 20px; }
+        .recipe-steps h4 { font-family: 'Orbitron', sans-serif; font-size: 16px; letter-spacing: 2px; color: var(--accent); text-transform: uppercase; margin-bottom: 15px; }
+        .recipe-steps ol { padding-left: 25px; }
+        .recipe-steps li { margin-bottom: 10px; color: var(--text-muted); line-height: 1.8; }
+        .safety-notes { background: rgba(255, 170, 0, 0.1); border: 2px solid var(--warning); padding: 20px; }
+        .safety-notes h4 { font-family: 'Orbitron', sans-serif; font-size: 16px; letter-spacing: 2px; color: var(--warning); text-transform: uppercase; margin-bottom: 15px; }
+        .safety-notes ul { padding-left: 25px; }
+        .safety-notes li { margin-bottom: 8px; color: var(--text-muted); }
+
+        .summary-card { background: linear-gradient(135deg, rgba(0, 255, 136, 0.05) 0%, rgba(0, 212, 255, 0.05) 100%); border: 3px solid var(--primary); padding: 30px; margin-bottom: 30px; }
+        .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+        .summary-item { padding: 15px; background: var(--dark-surface); border-left: 4px solid var(--primary); }
+        .summary-label { font-family: 'Orbitron', sans-serif; font-size: 11px; letter-spacing: 2px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; }
+        .summary-value { font-family: 'Orbitron', sans-serif; font-size: 20px; font-weight: 700; color: var(--primary); }
+
+        .safety-checklist { background: rgba(255, 170, 0, 0.1); border: 3px solid var(--warning); padding: 30px; margin-bottom: 30px; }
+        .safety-checklist h3 { font-family: 'Orbitron', sans-serif; font-size: 20px; letter-spacing: 2px; color: var(--warning); text-transform: uppercase; margin-bottom: 20px; }
+        .checkbox-item { display: flex; align-items: center; gap: 15px; padding: 15px; background: var(--dark-surface); border: 2px solid rgba(255, 170, 0, 0.3); margin-bottom: 12px; cursor: pointer; transition: all 0.3s; }
+        .checkbox-item:hover { background: rgba(255, 170, 0, 0.05); border-color: var(--warning); }
+        .checkbox-item input[type="checkbox"] { width: 24px; height: 24px; cursor: pointer; }
+        .checkbox-item label { font-size: 14px; cursor: pointer; flex: 1; color: var(--text); }
+
+        .execution-progress { display: none; margin-top: 40px; }
+        .execution-progress.active { display: block; }
+        .progress-stage { margin-bottom: 25px; }
+        .progress-label { font-family: 'Orbitron', sans-serif; font-size: 14px; letter-spacing: 2px; color: var(--text); text-transform: uppercase; margin-bottom: 10px; }
+        .progress-bar-outer { height: 35px; background: rgba(0, 255, 136, 0.1); border: 2px solid rgba(0, 255, 136, 0.3); overflow: hidden; }
+        .progress-bar-inner { height: 100%; background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 100%); width: 0%; transition: width 0.5s; display: flex; align-items: center; justify-content: center; font-family: 'Orbitron', sans-serif; font-weight: 700; color: var(--dark); letter-spacing: 2px; box-shadow: 0 0 20px rgba(0, 255, 136, 0.5); }
+
+        .completion-screen { display: none; text-align: center; padding: 60px 40px; background: linear-gradient(135deg, rgba(0, 255, 136, 0.1) 0%, rgba(0, 212, 255, 0.1) 100%); border: 3px solid var(--primary); }
+        .completion-screen.active { display: block; }
+        .completion-icon { font-size: 100px; margin-bottom: 30px; animation: float 3s ease-in-out infinite; }
+        .completion-screen h2 { font-family: 'Orbitron', sans-serif; font-size: 36px; font-weight: 900; letter-spacing: 3px; color: var(--primary); text-transform: uppercase; margin-bottom: 20px; }
+        .job-details { background: var(--dark-surface); border: 2px solid rgba(0, 255, 136, 0.3); padding: 30px; margin: 30px 0; text-align: left; }
+        .job-details p { margin-bottom: 12px; font-family: 'Space Mono', monospace; font-size: 14px; color: var(--text); }
+        .job-details strong { font-family: 'Orbitron', sans-serif; color: var(--primary); letter-spacing: 1px; }
+        .job-details ul { list-style: none; padding: 0; margin-top: 15px; }
+        .job-details ul li { padding: 8px 0; border-bottom: 1px solid rgba(0, 255, 136, 0.1); color: var(--text-muted); }
+
+        .notification { position: fixed; top: 100px; right: 40px; background: var(--dark-card); border: 2px solid var(--primary); padding: 25px 30px; max-width: 400px; box-shadow: 0 10px 40px rgba(0, 255, 136, 0.4); z-index: 3000; animation: slideInRight 0.5s; }
+        .notification-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .notification-title { font-family: 'Orbitron', sans-serif; font-size: 14px; letter-spacing: 2px; color: var(--primary); text-transform: uppercase; }
+        .notification-close { background: none; border: none; color: var(--text-muted); font-size: 24px; cursor: pointer; transition: all 0.3s; }
+        .notification-close:hover { color: var(--secondary); transform: rotate(90deg); }
+        .notification-body { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+
+        .soil-data-section { background: var(--dark-card); border: 2px solid rgba(0, 212, 255, 0.2); padding: 40px; margin-bottom: 40px; }
+        .soil-data-section h3 { font-family: 'Orbitron', sans-serif; font-size: 24px; letter-spacing: 2px; color: var(--accent); text-transform: uppercase; margin-bottom: 30px; }
+        .soil-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; }
+
+        @media (max-width: 768px) { .nav { padding: 15px 20px; flex-wrap: wrap; gap: 10px; } .logo { font-size: 20px; } .container { padding: 60px 20px; } .upload-grid, .diagnosis-comparison, .summary-grid { grid-template-columns: 1fr; } .env-grid { grid-template-columns: 1fr 1fr; } .phase-title { font-size: 20px; } .notification { right: 20px; left: 20px; max-width: none; } .nav-right { width: 100%; justify-content: center; gap: 6px; } .nav-link { padding: 6px 10px; font-size: 11px; } .language-selector { width: 100%; justify-content: center; } .lang-select { font-size: 11px; padding: 5px 6px; } .voice-btn { padding: 5px 8px; font-size: 11px; } .status-indicator { display: none; } .hero-title { font-size: 28px; } .hero-tagline { font-size: 11px; } .cta-button { padding: 12px 24px; font-size: 14px; } }
+        @media (max-width: 480px) { .nav-link span { display: none; } .nav-link { padding: 6px 10px; } .hero-title { font-size: 24px; } .phase-header { flex-direction: column; gap: 8px; } .soil-form-grid { grid-template-columns: 1fr; } .risk-data-grid { grid-template-columns: 1fr; } }
+        ::-webkit-scrollbar { width: 12px; }
+        ::-webkit-scrollbar-track { background: var(--dark); }
+        ::-webkit-scrollbar-thumb { background: linear-gradient(180deg, var(--primary) 0%, var(--accent) 100%); border: 2px solid var(--dark); }
+        input[type="file"] { display: none; }
+    </style>
+</head>
+<body>
+    <div class="scan-line"></div>
+    <nav class="nav">
+        <div class="logo">AGRI SENTINEL</div>
+        <div class="nav-right">
+            <div class="language-selector">
+                <select id="languageSelect" class="lang-select" onchange="changeLanguage(this.value)">
+                    <option value="en">🇬🇧 English</option>
+                    <option value="hi">🇮🇳 हिंदी (Hindi)</option>
+                    <option value="ta">🇮🇳 தமிழ் (Tamil)</option>
+                    <option value="te">🇮🇳 తెలుగు (Telugu)</option>
+                    <option value="kn">🇮🇳 ಕನ್ನಡ (Kannada)</option>
+                    <option value="ml">🇮🇳 മലയാളം (Malayalam)</option>
+                    <option value="mr">🇮🇳 मराठी (Marathi)</option>
+                    <option value="gu">🇮🇳 ગુજરાતી (Gujarati)</option>
+                    <option value="bn">🇮🇳 বাংলা (Bengali)</option>
+                    <option value="pa">🇮🇳 ਪੰਜਾਬੀ (Punjabi)</option>
+                    <option value="or">🇮🇳 ଓଡ଼ିଆ (Odia)</option>
+                </select>
+                <button id="voiceToggle" class="voice-btn" onclick="toggleVoiceMode()" title="Enable voice for farmers who can't read">
+                    🔊 <span data-translate="voice">VOICE</span>
+                </button>
+            </div>
+            <a href="/dashboard" class="nav-link">🏠 <span data-translate="dashboard">Dashboard</span></a>
+            <a href="/history" class="nav-link">📊 <span data-translate="history">History</span></a>
+            <div class="status-indicator"><span class="status-dot"></span><span data-translate="ai_ready">AI READY</span></div>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="hero-grid"></div>
+        <div class="hero-content">
+            <h1 class="hero-title">AGRI-SENTINEL</h1>
+            <p class="hero-subtitle" data-translate="hero_subtitle">Plant Disease Detection & Treatment System</p>
+            <div class="hero-tagline" data-translate="hero_tagline">🤖 AI ADVISES, FARMER DECIDES, ROBOT EXECUTES</div>
+            <button class="cta-button" onclick="scrollToSystem()" data-translate="initialize_system">INITIALIZE SYSTEM</button>
+        </div>
+    </section>
+
+    <div class="container">
+        <section class="soil-data-section" id="soilSection">
+            <h3 data-translate="soil_data_entry">🌱 SOIL DATA ENTRY</h3>
+            <form id="soilForm">
+                <input type="hidden" name="device_id" value="BOT_01">
+                <div class="soil-form-grid">
+                    <div class="form-group"><label class="form-label" data-translate="moisture">Moisture (%)</label><input type="number" name="moisture" id="soilMoisture" class="form-input" placeholder="0-100" required></div>
+                    <div class="form-group"><label class="form-label" data-translate="ph_level">pH Level</label><input type="number" step="0.1" name="ph" id="soilPh" class="form-input" placeholder="0-14" required></div>
+                    <div class="form-group"><label class="form-label" data-translate="nitrogen">Nitrogen (ppm)</label><input type="number" name="nitrogen" id="soilNitrogen" class="form-input" placeholder="N value" required></div>
+                    <div class="form-group"><label class="form-label" data-translate="phosphorus">Phosphorus (ppm)</label><input type="number" name="phosphorus" id="soilPhosphorus" class="form-input" placeholder="P value" required></div>
+                    <div class="form-group"><label class="form-label" data-translate="potassium">Potassium (ppm)</label><input type="number" name="potassium" id="soilPotassium" class="form-input" placeholder="K value" required></div>
+                </div>
+                <button type="submit" id="soilSubmitBtn" class="action-btn" style="margin-top: 20px; background: linear-gradient(135deg, var(--accent) 0%, #0088ff 100%);" data-translate="store_soil_data">💾 STORE SOIL DATA</button>
+            </form>
+        </section>
+
+        <section class="phase-section" id="phase1">
+            <div class="phase-header"><div class="phase-number">1</div><div class="phase-title" data-translate="phase1_title">🔬 DISEASE DETECTION</div></div>
+            <div class="upload-grid">
+                <div class="upload-box" id="uploadBox1"><input type="file" id="fileUpload" accept="image/*"><div class="upload-icon">📤</div><div class="upload-text" data-translate="upload_leaf">UPLOAD LEAF IMAGE</div><div class="upload-subtext" data-translate="upload_hint">Click to select • JPG/PNG</div></div>
+                <div class="upload-box" id="uploadBox2" style="padding: 20px; cursor: default;">
+                    <div class="upload-text" style="margin-bottom: 15px;" data-translate="phone_camera">📱 PHONE CAMERA STREAM</div>
+                    <div style="position: relative; width: 100%; max-width: 320px; margin: 0 auto;">
+                        <img src="http://192.168.137.97:8080/video" alt="Phone Camera Stream" style="width: 100%; border: 2px solid var(--primary); box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                        <div style="display: none; padding: 40px; background: rgba(255, 51, 102, 0.1); border: 2px dashed var(--secondary); color: var(--secondary); font-size: 12px; text-align: center;">
+                            <span data-translate="camera_unavailable">⚠️ Camera stream unavailable</span><br><span style="color: var(--text-muted);" data-translate="camera_hint">Ensure IP Webcam app is running on phone</span>
+                        </div>
+                    </div>
+                    <button class="action-btn" onclick="captureFromPhone()" style="margin-top: 15px; width: auto; padding: 12px 30px;" data-translate="capture_phone">📸 CAPTURE FROM PHONE</button>
+                    <div class="upload-subtext" style="margin-top: 10px;">IP Webcam: 192.168.137.2:8080</div>
+                </div>
+            </div>
+            <div class="image-preview" id="imagePreview"><img src="" alt="Preview" class="preview-image" id="previewImage"></div>
+            <div class="form-group">
+                <label class="form-label" data-translate="plant_name_label">PLANT NAME (Required for accurate detection):</label>
+                <select class="form-select" id="plantSelect">
+                    <option value="" data-translate="select_plant">-- SELECT PLANT --</option>
+                    <option value="Tomato">🍅 Tomato</option><option value="Apple">🍎 Apple</option><option value="Corn">🌽 Corn</option>
+                    <option value="Grape">🍇 Grape</option><option value="Potato">🥔 Potato</option><option value="Pepper">🌶️ Pepper</option>
+                    <option value="Rice">🌾 Rice</option><option value="Wheat">🌾 Wheat</option><option value="Cotton">🧵 Cotton</option>
+                    <option value="other">🌿 Other (specify)</option>
+                </select>
+                <p style="color: var(--text-muted); font-size: 12px; margin-top: 8px;" data-translate="plant_hint">ℹ️ Plant name helps Gemini AI provide accurate disease-specific detection</p>
+            </div>
+            <div class="other-plant-input" id="otherPlantInput"><label class="form-label" data-translate="specify_plant">SPECIFY PLANT NAME:</label><input type="text" class="form-input" id="otherPlantText" placeholder="e.g., Mango, Orange, Strawberry"></div>
+            <button class="action-btn" id="diagnoseBtn" disabled data-translate="run_diagnosis">🔍 RUN AI DIAGNOSIS</button>
+            <div class="loading-spinner" id="loadingSpinner"><div class="spinner"></div><div class="loading-text" data-translate="analyzing">🔬 ANALYZING WITH GEMINI AI...</div></div>
+            <div class="diagnosis-results" id="diagnosisResults">
+                <div class="diagnosis-header">
+                    <div class="diagnosis-category confirmed" id="diagnosisCategory">✓ <span data-translate="confirmed">CONFIRMED</span></div>
+                    <div class="disease-name" id="diseaseName">DISEASE NAME</div>
+                    <button class="speak-btn" onclick="speakDiagnosis()" title="Listen to diagnosis">🔊</button>
+                    <div><span class="confidence-badge confidence-high" id="confidenceBadge" data-translate="high_confidence">HIGH CONFIDENCE</span></div>
+                    <div class="source-info" data-translate="powered_by">📊 POWERED BY GEMINI 2.0 FLASH AI</div>
+                    <button class="action-btn risk-analysis-btn" onclick="openRiskAnalysis()" style="margin-top: 20px; width: auto; padding: 14px 30px;">📉 ANALYZE SPREAD RISK</button>
+                </div>
+                <div class="diagnosis-comparison">
+                    <div class="diagnosis-card">
+                        <h3 data-translate="ai_prediction">🤖 AI PREDICTION</h3>
+                        <p><strong data-translate="disease">DISEASE:</strong> <span id="mlDisease">-</span></p>
+                        <div class="confidence-bar-container"><div class="confidence-bar-label" data-translate="confidence">CONFIDENCE</div><div class="confidence-bar"><div class="confidence-bar-fill" id="mlConfidenceBar" style="width: 0%">0%</div></div></div>
+                        <p><strong data-translate="severity">SEVERITY:</strong> <span id="diseaseSeverity">-</span></p>
+                    </div>
+                    <div class="diagnosis-card">
+                        <h3 data-translate="symptoms_detected">🧠 SYMPTOMS DETECTED</h3>
+                        <p><strong data-translate="confidence">CONFIDENCE:</strong> <span id="aiConfidence">-</span></p>
+                        <p><strong data-translate="symptoms">SYMPTOMS:</strong></p>
+                        <ul class="symptoms-list" id="symptomsList"><li>Analyzing...</li></ul>
+                    </div>
+                </div>
+                <div class="alert alert-info" style="margin-top: 30px;"><span class="alert-icon">📋</span><div class="alert-content"><strong data-translate="description">DESCRIPTION</strong><p id="diseaseDescription">Loading...</p></div></div>
+
+                <!-- Disease Progression Simulator (Timeline Prediction) -->
+                <div class="timeline-container" id="timelineContainer">
+                    <div class="timeline-header">
+                        <span style="font-size: 32px;">⏳</span>
+                        <div>
+                            <div class="timeline-title" data-translate="timeline_title">TIMELINE PREDICTION</div>
+                            <div class="timeline-subtitle" data-translate="timeline_subtitle">See what happens without treatment</div>
+                        </div>
+                    </div>
+
+                    <div class="timeline-content">
+                        <!-- Image Section -->
+                        <div class="timeline-image-section">
+                            <div class="timeline-image-wrapper">
+                                <img src="" alt="Disease Progression" class="timeline-image" id="timelineImage">
+                                <div class="timeline-day-overlay" id="timelineDayOverlay">DAY 0</div>
+                                <div class="timeline-decay-overlay" id="timelineDecayOverlay"></div>
+                            </div>
+                        </div>
+
+                        <!-- Controls Section -->
+                        <div class="timeline-controls">
+                            <div class="timeline-slider-container">
+                                <div class="timeline-slider-label">
+                                    <span data-translate="days_label">DAYS WITHOUT TREATMENT</span>
+                                    <span class="timeline-slider-value" id="timelineSliderValue">0</span>
+                                </div>
+                                <input type="range" min="0" max="10" value="0" class="timeline-slider" id="timelineSlider" oninput="updateTimelineProgression(this.value)">
+                                <div class="timeline-day-markers">
+                                    <span>0</span><span>2</span><span>4</span><span>6</span><span>8</span><span>10</span>
+                                </div>
+                            </div>
+
+                            <!-- Status Display -->
+                            <div class="timeline-status recoverable" id="timelineStatus">
+                                <div class="timeline-status-icon" id="timelineStatusIcon">✅</div>
+                                <div class="timeline-status-text recoverable" id="timelineStatusText" data-translate="recoverable">RECOVERABLE</div>
+                                <div class="timeline-status-desc" id="timelineStatusDesc">Early stage - Treatment will be highly effective. Full recovery expected with immediate action.</div>
+                            </div>
+
+                            <!-- Urgency Alert -->
+                            <div class="timeline-urgency" id="timelineUrgency">
+                                <div class="timeline-urgency-text">🚨 <span data-translate="spray_now">SPRAY NOW TO SAVE YOUR CROP!</span> 🚨</div>
+                            </div>
+
+                            <!-- Stats -->
+                            <div class="timeline-stats">
+                                <div class="timeline-stat">
+                                    <div class="timeline-stat-value" id="timelineYieldLoss" style="color: var(--secondary);">0%</div>
+                                    <div class="timeline-stat-label" data-translate="yield_loss">Yield Loss</div>
+                                </div>
+                                <div class="timeline-stat">
+                                    <div class="timeline-stat-value" id="timelineSpreadArea" style="color: var(--warning);">1x</div>
+                                    <div class="timeline-stat-label" data-translate="spread_area">Spread Area</div>
+                                </div>
+                                <div class="timeline-stat">
+                                    <div class="timeline-stat-value" id="timelineRecoveryChance" style="color: var(--primary);">95%</div>
+                                    <div class="timeline-stat-label" data-translate="recovery_chance">Recovery Chance</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="phase-section locked" id="phase2">
+            <div class="phase-header"><div class="phase-number">2</div><div class="phase-title" data-translate="phase2_title">🧪 TREATMENT PLANNING</div></div>
+            <h3 style="font-family: 'Orbitron', sans-serif; font-size: 20px; color: var(--primary); margin-bottom: 20px;" data-translate="env_conditions">📊 ENVIRONMENTAL CONDITIONS</h3>
+            <div class="env-grid">
+                <div class="env-card"><div class="env-icon">🌡️</div><div class="env-label" data-translate="temperature">TEMPERATURE</div><div class="env-value" id="tempValue">--°C</div></div>
+                <div class="env-card"><div class="env-icon">💧</div><div class="env-label" data-translate="humidity">HUMIDITY</div><div class="env-value" id="humidityValue">--%</div></div>
+                <div class="env-card"><div class="env-icon">🌊</div><div class="env-label" data-translate="soil_moisture">SOIL MOISTURE</div><div class="env-value" id="moistureValue">--%</div></div>
+                <div class="env-card"><div class="env-icon">⚗️</div><div class="env-label" data-translate="soil_ph">SOIL PH</div><div class="env-value" id="phValue">--</div></div>
+            </div>
+            <div class="inventory-section"><h3 class="inventory-title" data-translate="chemical_inventory">🛢️ CHEMICAL INVENTORY</h3><div id="inventoryContainer"></div></div>
+            <button class="action-btn" id="generateRecipeBtn" data-translate="generate_recipe">📋 GENERATE TREATMENT RECIPE</button>
+            <div class="recipe-card" id="recipeCard">
+                <h3 class="recipe-title" id="recipeTitle" data-translate="treatment_recipe">📝 TREATMENT RECIPE</h3>
+                <button class="speak-btn" onclick="speakRecipe()" title="Listen to recipe" style="margin-bottom: 15px;">🔊 <span data-translate="listen">Listen</span></button>
+                <h4 style="font-family: 'Orbitron', sans-serif; font-size: 16px; color: var(--primary); margin-bottom: 15px;" data-translate="ingredients">INGREDIENTS:</h4>
+                <ul class="recipe-ingredients" id="recipeIngredients"><li>Loading...</li></ul>
+                <div class="recipe-steps"><h4 data-translate="mixing_instructions">MIXING INSTRUCTIONS:</h4><ol id="mixingSteps"><li>Loading...</li></ol></div>
+                <div class="safety-notes"><h4 data-translate="safety_warnings">⚠️ SAFETY WARNINGS</h4><ul><li><strong data-translate="ppe_required">PPE REQUIRED:</strong> <span data-translate="ppe_items">Wear gloves, mask, eyewear</span></li><li><strong data-translate="weather">WEATHER:</strong> <span data-translate="no_rain">No rain within 4 hours</span></li><li><strong data-translate="harvest">HARVEST:</strong> <span data-translate="wait_harvest">Wait before harvesting</span></li></ul></div>
+            </div>
+        </section>
+
+        <section class="phase-section locked" id="phase3">
+            <div class="phase-header"><div class="phase-number">3</div><div class="phase-title" data-translate="phase3_title">✅ FARMER APPROVAL & EXECUTION</div></div>
+            <div class="summary-card">
+                <h3 style="font-family: 'Orbitron', sans-serif; font-size: 24px; color: var(--primary); margin-bottom: 20px;" data-translate="treatment_summary">📋 TREATMENT SUMMARY</h3>
+                <button class="speak-btn" onclick="speakSummary()" title="Listen to summary" style="margin-bottom: 15px;">🔊 <span data-translate="listen">Listen</span></button>
+                <div class="summary-grid">
+                    <div class="summary-item"><div class="summary-label" data-translate="disease">DISEASE</div><div class="summary-value" id="summaryDisease">-</div></div>
+                    <div class="summary-item"><div class="summary-label" data-translate="plant">PLANT</div><div class="summary-value" id="summaryPlant">-</div></div>
+                    <div class="summary-item"><div class="summary-label" data-translate="confidence">CONFIDENCE</div><div class="summary-value" id="summaryConfidence">-</div></div>
+                    <div class="summary-item"><div class="summary-label" data-translate="type">TYPE</div><div class="summary-value" data-translate="spray">SPRAY</div></div>
+                </div>
+                <div style="margin-top: 20px; padding: 20px; background: var(--dark-surface); border: 2px solid rgba(0, 255, 136, 0.3);"><strong style="font-family: 'Orbitron', sans-serif; color: var(--primary);" data-translate="recipe">RECIPE:</strong><span style="color: var(--text-muted);" id="summaryRecipe"> Loading...</span></div>
+            </div>
+            <div class="safety-checklist">
+                <h3 data-translate="safety_checklist">⚠️ SAFETY CHECKLIST</h3>
+                <div class="checkbox-item"><input type="checkbox" id="safetyCheck1"><label for="safetyCheck1" data-translate="safety1">I understand safety warnings</label></div>
+                <div class="checkbox-item"><input type="checkbox" id="safetyCheck2"><label for="safetyCheck2" data-translate="safety2">Weather is suitable</label></div>
+                <div class="checkbox-item"><input type="checkbox" id="safetyCheck3"><label for="safetyCheck3" data-translate="safety3">Inventory verified</label></div>
+                <div class="checkbox-item"><input type="checkbox" id="safetyCheck4"><label for="safetyCheck4" data-translate="safety4">I understand harvest wait period</label></div>
+            </div>
+            <button class="action-btn danger" id="approveBtn" disabled data-translate="approve_start">🚜 APPROVE & START SPRAYING</button>
+            <div class="execution-progress" id="executionProgress">
+                <h3 style="font-family: 'Orbitron', sans-serif; font-size: 28px; color: var(--primary); text-align: center; margin-bottom: 40px;" data-translate="robot_execution">🤖 ROBOT EXECUTION</h3>
+                <div class="progress-stage"><div class="progress-label" data-translate="initializing">⚙️ INITIALIZING</div><div class="progress-bar-outer"><div class="progress-bar-inner" id="progress1">0%</div></div></div>
+                <div class="progress-stage"><div class="progress-label" data-translate="mixing">🧪 MIXING</div><div class="progress-bar-outer"><div class="progress-bar-inner" id="progress2">0%</div></div></div>
+                <div class="progress-stage"><div class="progress-label" data-translate="navigating">🚜 NAVIGATING</div><div class="progress-bar-outer"><div class="progress-bar-inner" id="progress3">0%</div></div></div>
+                <div class="progress-stage"><div class="progress-label" data-translate="spraying">💦 SPRAYING</div><div class="progress-bar-outer"><div class="progress-bar-inner" id="progress4">0%</div></div></div>
+                <div class="progress-stage"><div class="progress-label" data-translate="completing">✅ COMPLETING</div><div class="progress-bar-outer"><div class="progress-bar-inner" id="progress5">0%</div></div></div>
+            </div>
+            <div class="completion-screen" id="completionScreen">
+                <div class="completion-icon">✅</div>
+                <h2 data-translate="treatment_complete">TREATMENT COMPLETE!</h2>
+                <p style="font-size: 16px; color: var(--text-muted);" data-translate="robot_finished">Robot has finished spraying.</p>
+                <button class="speak-btn" onclick="speakCompletion()" title="Listen to completion" style="margin: 15px auto;">🔊 <span data-translate="listen">Listen</span></button>
+                <div class="job-details">
+                    <p><strong data-translate="job_id">JOB ID:</strong> <span id="jobId">-</span></p>
+                    <p><strong data-translate="time">TIME:</strong> <span id="completionTime">-</span></p>
+                    <p><strong data-translate="chemicals_used">CHEMICALS USED:</strong></p>
+                    <ul id="chemicalsUsedList"><li>Loading...</li></ul>
+                </div>
+                <button class="action-btn" id="newDiagnosisBtn" data-translate="new_diagnosis">🔄 NEW DIAGNOSIS</button>
+            </div>
+        </section>
+
+        <!-- Farmer Community Section -->
+        <section class="phase-section" id="communitySection" style="margin-top: 40px; background: linear-gradient(135deg, #fff8e1 0%, #f1f8e9 100%); border: 2px solid #ff9800;">
+            <div class="phase-header" style="border-bottom-color: #ff9800;">
+                <div class="phase-number" style="background: linear-gradient(135deg, #ff9800, #f57c00);">💬</div>
+                <div class="phase-title" style="color: #f57c00;">👨‍🌾 FARMER COMMUNITY</div>
+            </div>
+            <div style="text-align: center; padding: 20px;">
+                <div style="font-size: 64px; margin-bottom: 16px;">🗣️👩‍🌾👨‍🌾🌾</div>
+                <h3 style="font-size: 20px; font-weight: 700; color: #1a1a1a; margin-bottom: 8px;">Detected a disease? Discuss it with fellow farmers!</h3>
+                <p style="font-size: 14px; color: #666; margin-bottom: 20px; max-width: 500px; margin-left: auto; margin-right: auto;">
+                    Share your experience, ask questions, and learn from farmers across India who have dealt with similar crop issues.
+                </p>
+                <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px;">
+                    <div style="background: white; border: 1px solid #e0e0e0; border-radius: 12px; padding: 14px 20px; text-align: center; min-width: 120px;">
+                        <div style="font-size: 28px;">💬</div>
+                        <div style="font-size: 12px; font-weight: 600; color: #2e7d32; margin-top: 4px;">Ask Questions</div>
+                    </div>
+                    <div style="background: white; border: 1px solid #e0e0e0; border-radius: 12px; padding: 14px 20px; text-align: center; min-width: 120px;">
+                        <div style="font-size: 28px;">🧪</div>
+                        <div style="font-size: 12px; font-weight: 600; color: #2e7d32; margin-top: 4px;">Share Solutions</div>
+                    </div>
+                    <div style="background: white; border: 1px solid #e0e0e0; border-radius: 12px; padding: 14px 20px; text-align: center; min-width: 120px;">
+                        <div style="font-size: 28px;">🤝</div>
+                        <div style="font-size: 12px; font-weight: 600; color: #2e7d32; margin-top: 4px;">Help Others</div>
+                    </div>
+                </div>
+                <a href="https://agrobit-forum.vercel.app/" target="_blank"
+                   style="display: inline-flex; align-items: center; gap: 10px; padding: 16px 32px; background: linear-gradient(135deg, #ff9800, #f57c00); color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; font-family: 'Poppins', sans-serif; text-decoration: none; cursor: pointer; box-shadow: 0 4px 15px rgba(255,152,0,0.4); transition: all 0.3s;">
+                    🌾 Join the Farmer Forum →
+                </a>
+            </div>
+        </section>
+    </div>
+
+    <!-- Risk Analysis Panel (Modal Overlay) -->
+    <div id="riskAnalysisPanel">
+        <div class="risk-panel-content">
+            <div class="risk-panel-header">
+                <h2 class="risk-panel-title">📉 RISK & SPREAD ANALYSIS</h2>
+                <button class="risk-close-btn" onclick="closeRiskAnalysis()">✕</button>
+            </div>
+
+            <!-- Risk Meter / Gauge -->
+            <div class="risk-meter-container">
+                <h3 style="font-family: 'Orbitron', sans-serif; font-size: 14px; letter-spacing: 2px; color: var(--text-muted); margin-bottom: 20px;">SPREAD VELOCITY INDEX</h3>
+                <div class="risk-gauge">
+                    <div class="risk-gauge-bg"></div>
+                    <div class="risk-gauge-fill" id="riskGaugeFill"></div>
+                    <div class="risk-gauge-mask"></div>
+                    <div class="risk-gauge-needle" id="riskNeedle"></div>
+                    <div class="risk-gauge-center"></div>
+                </div>
+                <div class="risk-level-label" id="riskLevelLabel">--</div>
+                <div class="risk-speed" id="riskSpeedLabel">SPREAD SPEED: --</div>
+            </div>
+
+            <!-- Data Comparison Grid -->
+            <div class="risk-data-grid">
+                <div class="risk-data-card">
+                    <h4>💧 HUMIDITY ANALYSIS</h4>
+                    <div class="risk-comparison">
+                        <div class="risk-value-box">
+                            <div class="risk-value-label">Current</div>
+                            <div class="risk-value-num current" id="riskCurrentHumidity">--%</div>
+                        </div>
+                        <div class="risk-vs">VS</div>
+                        <div class="risk-value-box">
+                            <div class="risk-value-label">Disease Ideal</div>
+                            <div class="risk-value-num ideal" id="riskIdealHumidity">--%</div>
+                        </div>
+                    </div>
+                    <div class="risk-match-indicator" id="humidityMatchIndicator">CALCULATING...</div>
+                </div>
+                <div class="risk-data-card">
+                    <h4>⚗️ SOIL pH ANALYSIS</h4>
+                    <div class="risk-comparison">
+                        <div class="risk-value-box">
+                            <div class="risk-value-label">Current</div>
+                            <div class="risk-value-num current" id="riskCurrentPh">--</div>
+                        </div>
+                        <div class="risk-vs">VS</div>
+                        <div class="risk-value-box">
+                            <div class="risk-value-label">Disease Ideal</div>
+                            <div class="risk-value-num ideal" id="riskIdealPh">--</div>
+                        </div>
+                    </div>
+                    <div class="risk-match-indicator" id="phMatchIndicator">CALCULATING...</div>
+                </div>
+                <div class="risk-data-card">
+                    <h4>🌡️ TEMPERATURE ANALYSIS</h4>
+                    <div class="risk-comparison">
+                        <div class="risk-value-box">
+                            <div class="risk-value-label">Current</div>
+                            <div class="risk-value-num current" id="riskCurrentTemp">--°C</div>
+                        </div>
+                        <div class="risk-vs">VS</div>
+                        <div class="risk-value-box">
+                            <div class="risk-value-label">Disease Ideal</div>
+                            <div class="risk-value-num ideal" id="riskIdealTemp">--°C</div>
+                        </div>
+                    </div>
+                    <div class="risk-match-indicator" id="tempMatchIndicator">CALCULATING...</div>
+                </div>
+                <div class="risk-data-card">
+                    <h4>🌊 SOIL MOISTURE ANALYSIS</h4>
+                    <div class="risk-comparison">
+                        <div class="risk-value-box">
+                            <div class="risk-value-label">Current</div>
+                            <div class="risk-value-num current" id="riskCurrentMoisture">--%</div>
+                        </div>
+                        <div class="risk-vs">VS</div>
+                        <div class="risk-value-box">
+                            <div class="risk-value-label">Safe Range</div>
+                            <div class="risk-value-num ideal" id="riskIdealMoisture">--</div>
+                        </div>
+                    </div>
+                    <div class="risk-match-indicator" id="moistureMatchIndicator">CALCULATING...</div>
+                </div>
+            </div>
+
+            <!-- Prediction Alert Box -->
+            <div class="risk-prediction" id="riskPredictionBox">
+                <div class="risk-prediction-header">
+                    <span class="risk-prediction-icon" id="riskPredictionIcon">⚠️</span>
+                    <span class="risk-prediction-title" id="riskPredictionTitle">ANALYSIS IN PROGRESS</span>
+                </div>
+                <p class="risk-prediction-text" id="riskPredictionText">Calculating disease spread probability based on current environmental conditions...</p>
+            </div>
+
+            <!-- Risk Factors -->
+            <div class="risk-factors">
+                <h4>📊 CONTRIBUTING FACTORS</h4>
+                <div id="riskFactorsList">
+                    <!-- Dynamically populated -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let appState = { sessionId: null, imageUploaded: false, plantSelected: false, diagnosisData: null };
+        function initializeSession() { appState.sessionId = 'session_' + Date.now(); fetch('/api/init-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: appState.sessionId }) }).catch(e => console.error(e)); }
+        function scrollToSystem() { document.getElementById('soilSection').scrollIntoView({ behavior: 'smooth' }); }
+        function showNotification(title, message) { const n = document.createElement('div'); n.className = 'notification'; n.innerHTML = `<div class="notification-header"><span class="notification-title">${title}</span><button class="notification-close" onclick="this.parentElement.parentElement.remove()">×</button></div><div class="notification-body">${message}</div>`; document.body.appendChild(n); setTimeout(() => n.remove(), 5000); }
+
+        // Soil Form AJAX Handler
+        document.getElementById('soilForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('soilSubmitBtn');
+            const originalText = btn.textContent;
+            btn.textContent = '⏳ STORING...';
+            btn.disabled = true;
+
+            const soilData = {
+                device_id: 'BOT_01',
+                moisture: document.getElementById('soilMoisture').value,
+                ph: document.getElementById('soilPh').value,
+                nitrogen: document.getElementById('soilNitrogen').value,
+                phosphorus: document.getElementById('soilPhosphorus').value,
+                potassium: document.getElementById('soilPotassium').value
+            };
+
+            fetch('/api/store-soil', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(soilData)
+            })
+            .then(r => r.json())
+            .then(data => {
+                btn.disabled = false;
+                if (data.success) {
+                    btn.textContent = '✓ STORED!';
+                    btn.style.background = 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)';
+                    showNotification('SOIL DATA STORED', 'Soil parameters saved successfully');
+                    // Reset form after short delay
+                    setTimeout(() => {
+                        btn.textContent = originalText;
+                        btn.style.background = 'linear-gradient(135deg, var(--accent) 0%, #0088ff 100%)';
+                        document.getElementById('soilForm').reset();
+                    }, 2000);
+                } else {
+                    btn.textContent = originalText;
+                    showNotification('ERROR', data.error || 'Failed to store soil data');
+                }
+            })
+            .catch(err => {
+                btn.textContent = originalText;
+                btn.disabled = false;
+                showNotification('ERROR', 'Failed to store soil data: ' + err.message);
+            });
+        });
+
+        const uploadBox1 = document.getElementById('uploadBox1'), uploadBox2 = document.getElementById('uploadBox2'), fileUpload = document.getElementById('fileUpload'), imagePreview = document.getElementById('imagePreview'), previewImage = document.getElementById('previewImage'), plantSelect = document.getElementById('plantSelect'), otherPlantInput = document.getElementById('otherPlantInput'), diagnoseBtn = document.getElementById('diagnoseBtn');
+        uploadBox1.addEventListener('click', () => fileUpload.click());
+
+        function handleImageUpload(file) { if (file) { const reader = new FileReader(); reader.onload = (e) => { previewImage.src = e.target.result; imagePreview.classList.add('active'); const fd = new FormData(); fd.append('image', file); fd.append('session_id', appState.sessionId); fetch('/api/upload-image', { method: 'POST', body: fd }).then(r => r.json()).then(d => { if (d.success) { appState.imageUploaded = true; checkBtn(); showNotification('UPLOADED', 'Image ready'); } }); }; reader.readAsDataURL(file); } }
+
+        async function captureFromPhone() {
+            try {
+                showNotification('CAPTURING', 'Fetching snapshot from phone camera...');
+                const response = await fetch('/api/phone-camera/photo');
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error || 'Failed to capture from phone camera');
+                }
+                const blob = await response.blob();
+                const file = new File([blob], 'phone_capture_' + Date.now() + '.jpg', { type: 'image/jpeg' });
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    previewImage.src = e.target.result;
+                    imagePreview.classList.add('active');
+                    const fd = new FormData();
+                    fd.append('image', file);
+                    fd.append('session_id', appState.sessionId);
+                    const uploadResponse = await fetch('/api/upload-image', { method: 'POST', body: fd });
+                    const data = await uploadResponse.json();
+                    if (data.success) {
+                        appState.imageUploaded = true;
+                        checkBtn();
+                        showNotification('CAPTURED', 'Phone camera image uploaded successfully');
+                    } else {
+                        showNotification('ERROR', 'Failed to upload captured image');
+                    }
+                };
+                reader.readAsDataURL(file);
+            } catch (error) {
+                showNotification('ERROR', 'Could not capture from phone: ' + error.message);
+                console.error('Phone capture error:', error);
+            }
+        }
+
+        fileUpload.addEventListener('change', e => handleImageUpload(e.target.files[0]));
+
+        plantSelect.addEventListener('change', e => { if (e.target.value === 'other') { otherPlantInput.classList.add('active'); appState.plantSelected = false; } else if (e.target.value) { otherPlantInput.classList.remove('active'); appState.plantSelected = true; fetch('/api/set-plant-type', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: appState.sessionId, plant_type: e.target.value }) }); } else { otherPlantInput.classList.remove('active'); appState.plantSelected = false; } checkBtn(); });
+        document.getElementById('otherPlantText').addEventListener('input', e => { if (e.target.value.trim()) { appState.plantSelected = true; fetch('/api/set-plant-type', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: appState.sessionId, plant_type: e.target.value }) }); } else { appState.plantSelected = false; } checkBtn(); });
+        function checkBtn() { diagnoseBtn.disabled = !(appState.imageUploaded && appState.plantSelected); }
+
+        diagnoseBtn.addEventListener('click', () => {
+            document.getElementById('loadingSpinner').classList.add('active');
+            document.getElementById('diagnosisResults').classList.remove('active');
+            diagnoseBtn.disabled = true;
+            const plantType = plantSelect.value === 'other' ? document.getElementById('otherPlantText').value : plantSelect.value;
+            fetch('/api/diagnose', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: appState.sessionId, plant_type: plantType }) })
+            .then(r => r.json()).then(data => {
+                document.getElementById('loadingSpinner').classList.remove('active');
+                diagnoseBtn.disabled = false;
+                if (data.success) {
+                    appState.diagnosisData = data.diagnosis;
+                    const d = data.diagnosis;
+                    document.getElementById('diseaseName').textContent = d.disease_name || 'UNKNOWN';
+                    document.getElementById('mlDisease').textContent = (d.disease_name || 'Unknown').toUpperCase();
+                    const conf = d.confidence_score || 0;
+                    document.getElementById('mlConfidenceBar').style.width = (conf * 100) + '%';
+                    document.getElementById('mlConfidenceBar').textContent = Math.round(conf * 100) + '%';
+                    document.getElementById('diseaseSeverity').textContent = (d.severity || 'Unknown').toUpperCase();
+                    document.getElementById('aiConfidence').textContent = d.confidence_level ? d.confidence_level.toUpperCase() : 'UNKNOWN';
+                    const sl = document.getElementById('symptomsList'); sl.innerHTML = '';
+                    if (d.symptoms_observed && d.symptoms_observed.length) { d.symptoms_observed.forEach(s => { const li = document.createElement('li'); li.textContent = '✓ ' + s; sl.appendChild(li); }); } else { sl.innerHTML = '<li>No symptoms</li>'; }
+                    document.getElementById('diseaseDescription').textContent = d.disease_description || 'No description.';
+                    const cl = d.confidence_level || 'low', badge = document.getElementById('confidenceBadge');
+                    badge.textContent = cl.toUpperCase() + ' CONFIDENCE';
+                    badge.className = 'confidence-badge confidence-' + cl;
+                    const cat = d.category || 'insufficient', catBadge = document.getElementById('diagnosisCategory');
+                    catBadge.textContent = cat === 'confirmed' ? '✓ CONFIRMED' : cat === 'probable' ? '⚠️ PROBABLE' : '❓ UNCERTAIN';
+                    catBadge.className = 'diagnosis-category ' + cat;
+                    document.getElementById('summaryDisease').textContent = d.disease_name || 'Unknown';
+                    document.getElementById('summaryPlant').textContent = d.plant_identified || plantType;
+                    document.getElementById('summaryConfidence').textContent = Math.round(conf * 100) + '%';
+                    document.getElementById('phase2').classList.remove('locked');
+                    document.getElementById('diagnosisResults').classList.add('active');
+                    initializeTimeline(); // Initialize the disease progression simulator
+                    loadEnvData();
+                    showNotification('COMPLETE', 'Disease: ' + (d.disease_name || 'Unknown'));
+                    document.getElementById('diagnosisResults').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } else { showNotification('ERROR', data.error || 'Failed'); }
+            }).catch(e => { document.getElementById('loadingSpinner').classList.remove('active'); diagnoseBtn.disabled = false; showNotification('ERROR', e.message); });
+        });
+
+        function loadEnvData() { fetch('/api/get-environmental-data', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: appState.sessionId }) }).then(r => r.json()).then(d => { if (d.success) { document.getElementById('tempValue').textContent = d.environmental_data.temperature_celsius + '°C'; document.getElementById('humidityValue').textContent = d.environmental_data.humidity_percent + '%'; document.getElementById('moistureValue').textContent = d.environmental_data.soil_moisture + '%'; document.getElementById('phValue').textContent = d.environmental_data.soil_pH; loadInventory(); } }); }
+        function loadInventory() { fetch('/api/get-inventory', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: appState.sessionId }) }).then(r => r.json()).then(d => { if (d.success) { const c = document.getElementById('inventoryContainer'); c.innerHTML = ''; for (const [id, item] of Object.entries(d.inventory)) { c.innerHTML += `<div class="inventory-item"><div class="inventory-label"><span>${item.chemical}</span><span>${item.fill_percentage}%</span></div><div class="inventory-bar"><div class="inventory-bar-fill" style="width: ${item.fill_percentage}%"></div></div></div>`; } } }); }
+
+        document.getElementById('generateRecipeBtn').addEventListener('click', () => {
+            const btn = document.getElementById('generateRecipeBtn');
+            btn.textContent = '⏳ GENERATING...'; btn.disabled = true;
+            fetch('/api/generate-recipe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: appState.sessionId }) })
+            .then(r => r.json()).then(d => {
+                if (d.success) {
+                    document.getElementById('recipeTitle').textContent = '📝 ' + d.recipe.recipe_name;
+                    const il = document.getElementById('recipeIngredients'); il.innerHTML = ''; let rt = '';
+                    d.recipe.recipe.forEach(i => { il.innerHTML += `<li>🧪 ${i.chemical}: ${i.amount_ml} ml</li>`; rt += `${i.chemical} (${i.amount_ml}ml) + `; });
+                    document.getElementById('summaryRecipe').textContent = rt.slice(0, -3);
+                    const ml = document.getElementById('mixingSteps'); ml.innerHTML = '';
+                    d.recipe.mixing_steps.forEach(s => { ml.innerHTML += `<li>${s}</li>`; });
+                    document.getElementById('recipeCard').classList.add('active');
+                    document.getElementById('phase3').classList.remove('locked');
+                    btn.textContent = '✓ GENERATED'; btn.style.background = 'linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%)';
+                    showNotification('RECIPE READY', 'Treatment protocol generated');
+                    document.getElementById('recipeCard').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } else { showNotification('ERROR', d.error); btn.textContent = '📋 GENERATE TREATMENT RECIPE'; btn.disabled = false; }
+            });
+        });
+
+        const checkboxes = [document.getElementById('safetyCheck1'), document.getElementById('safetyCheck2'), document.getElementById('safetyCheck3'), document.getElementById('safetyCheck4')];
+        checkboxes.forEach(cb => cb.addEventListener('change', () => { document.getElementById('approveBtn').disabled = !checkboxes.every(c => c.checked); }));
+
+        document.getElementById('approveBtn').addEventListener('click', () => {
+            document.getElementById('approveBtn').style.display = 'none';
+            document.querySelector('.safety-checklist').style.display = 'none';
+            document.querySelector('.summary-card').style.display = 'none';
+            document.getElementById('executionProgress').classList.add('active');
+            const stages = [{ id: 'progress1', d: 2000 }, { id: 'progress2', d: 3000 }, { id: 'progress3', d: 2500 }, { id: 'progress4', d: 4000 }, { id: 'progress5', d: 2000 }];
+            let delay = 0;
+            stages.forEach(s => { setTimeout(() => animateBar(s.id, s.d), delay); delay += s.d; });
+            setTimeout(() => {
+                document.getElementById('executionProgress').style.display = 'none';
+                document.getElementById('completionScreen').classList.add('active');
+                const now = new Date();
+                document.getElementById('completionTime').textContent = now.toLocaleString();
+                document.getElementById('jobId').textContent = 'TRT-' + now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + '-' + String(Math.floor(Math.random()*1000)).padStart(3,'0');
+                if (appState.diagnosisData) { document.getElementById('chemicalsUsedList').innerHTML = `<li>• A: ${appState.diagnosisData.container_a_ml || 0} ML</li><li>• B: ${appState.diagnosisData.container_b_ml || 0} ML</li><li>• C: ${appState.diagnosisData.container_c_ml || 0} ML</li><li>• WATER: 10000 ML</li>`; }
+                showNotification('COMPLETE', 'Treatment finished');
+                document.getElementById('completionScreen').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, delay + 500);
+        });
+
+        function animateBar(id, duration) { const bar = document.getElementById(id); let p = 0; const inc = (100 / duration) * 50; const t = setInterval(() => { p += inc; if (p >= 100) { p = 100; clearInterval(t); } bar.style.width = p + '%'; bar.textContent = Math.round(p) + '%'; }, 50); }
+
+        document.getElementById('newDiagnosisBtn').addEventListener('click', () => {
+            appState = { sessionId: appState.sessionId, imageUploaded: false, plantSelected: false, diagnosisData: null };
+            imagePreview.classList.remove('active'); previewImage.src = ''; plantSelect.value = ''; otherPlantInput.classList.remove('active'); document.getElementById('otherPlantText').value = ''; diagnoseBtn.disabled = true;
+            document.getElementById('loadingSpinner').classList.remove('active'); document.getElementById('diagnosisResults').classList.remove('active'); document.getElementById('mlConfidenceBar').style.width = '0%';
+            document.getElementById('phase2').classList.add('locked'); document.getElementById('recipeCard').classList.remove('active');
+            const btn = document.getElementById('generateRecipeBtn'); btn.textContent = '📋 GENERATE TREATMENT RECIPE'; btn.disabled = false; btn.style.background = '';
+            document.getElementById('phase3').classList.add('locked'); document.getElementById('approveBtn').style.display = ''; document.getElementById('approveBtn').disabled = true;
+            document.querySelector('.safety-checklist').style.display = ''; document.querySelector('.summary-card').style.display = '';
+            checkboxes.forEach(c => c.checked = false);
+            document.getElementById('executionProgress').classList.remove('active'); document.getElementById('executionProgress').style.display = '';
+            document.getElementById('completionScreen').classList.remove('active');
+            initializeSession();
+            showNotification('RESET', 'Ready for new diagnosis');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // ==================== RISK & SPREAD ANALYSIS ====================
+
+        // Disease ideal conditions database (mock data for common diseases)
+        const diseaseConditions = {
+            'default': { humidity: [60, 80], ph: [6.0, 7.0], temp: [20, 30], moisture: [40, 60] },
+            'blight': { humidity: [75, 95], ph: [5.5, 6.5], temp: [15, 25], moisture: [60, 80] },
+            'rust': { humidity: [80, 100], ph: [5.0, 7.0], temp: [15, 22], moisture: [50, 70] },
+            'powdery_mildew': { humidity: [50, 70], ph: [6.5, 8.0], temp: [20, 30], moisture: [30, 50] },
+            'leaf_spot': { humidity: [70, 90], ph: [6.0, 7.5], temp: [22, 28], moisture: [50, 70] },
+            'wilt': { humidity: [60, 80], ph: [6.0, 7.0], temp: [25, 35], moisture: [40, 60] },
+            'mosaic': { humidity: [40, 70], ph: [6.0, 7.5], temp: [25, 35], moisture: [30, 50] },
+            'rot': { humidity: [80, 100], ph: [5.5, 7.0], temp: [20, 30], moisture: [70, 90] },
+            'canker': { humidity: [70, 85], ph: [5.5, 6.5], temp: [18, 28], moisture: [50, 70] },
+            'scab': { humidity: [75, 95], ph: [5.5, 7.0], temp: [15, 24], moisture: [60, 80] },
+            'anthracnose': { humidity: [80, 95], ph: [6.0, 7.0], temp: [22, 30], moisture: [60, 80] }
+        };
+
+        // Open Risk Analysis Panel
+        function openRiskAnalysis() {
+            if (!appState.diagnosisData) {
+                showNotification('ERROR', 'Please run diagnosis first');
+                return;
+            }
+            document.getElementById('riskAnalysisPanel').classList.add('active');
+            document.body.style.overflow = 'hidden';
+            performRiskAnalysis();
+        }
+
+        // Close Risk Analysis Panel
+        function closeRiskAnalysis() {
+            document.getElementById('riskAnalysisPanel').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Get disease condition profile based on disease name
+        function getDiseaseProfile(diseaseName) {
+            const name = diseaseName.toLowerCase();
+            for (const [key, profile] of Object.entries(diseaseConditions)) {
+                if (key !== 'default' && name.includes(key)) {
+                    return { ...profile, matchedType: key };
+                }
+            }
+            // Check for common disease keywords
+            if (name.includes('fungal') || name.includes('fungus')) return { ...diseaseConditions.blight, matchedType: 'fungal' };
+            if (name.includes('viral') || name.includes('virus')) return { ...diseaseConditions.mosaic, matchedType: 'viral' };
+            if (name.includes('bacterial') || name.includes('bacteria')) return { ...diseaseConditions.wilt, matchedType: 'bacterial' };
+            return { ...diseaseConditions.default, matchedType: 'unknown' };
+        }
+
+        // Main Risk Calculation Function
+        function calculateRisk(diseaseName, currentHumidity, currentPh, currentTemp, currentMoisture) {
+            const profile = getDiseaseProfile(diseaseName);
+            let riskScore = 0;
+            let riskFactors = [];
+            let spreadSpeed = 'SLOW';
+
+            // Humidity Analysis (weight: 30%)
+            const humidityInIdeal = currentHumidity >= profile.humidity[0] && currentHumidity <= profile.humidity[1];
+            const humidityDanger = currentHumidity > profile.humidity[1];
+            if (humidityInIdeal) {
+                riskScore += 30;
+                riskFactors.push({ positive: true, text: `Humidity (${currentHumidity}%) is in disease-favorable range (${profile.humidity[0]}-${profile.humidity[1]}%)` });
+            } else if (humidityDanger) {
+                riskScore += 25;
+                riskFactors.push({ positive: true, text: `High humidity (${currentHumidity}%) exceeds disease threshold - accelerated spread likely` });
+            } else {
+                riskFactors.push({ positive: false, text: `Humidity (${currentHumidity}%) is below disease-favorable range` });
+            }
+
+            // pH Analysis (weight: 20%)
+            const phInIdeal = currentPh >= profile.ph[0] && currentPh <= profile.ph[1];
+            const phOutOfSafe = currentPh < 6.0 || currentPh > 7.0;
+            if (phInIdeal) {
+                riskScore += 20;
+                riskFactors.push({ positive: true, text: `Soil pH (${currentPh}) favors disease development (ideal: ${profile.ph[0]}-${profile.ph[1]})` });
+            } else if (phOutOfSafe) {
+                riskScore += 10;
+                riskFactors.push({ positive: true, text: `Soil pH (${currentPh}) outside safe range increases plant susceptibility` });
+            } else {
+                riskFactors.push({ positive: false, text: `Soil pH (${currentPh}) does not strongly favor disease` });
+            }
+
+            // Temperature Analysis (weight: 25%)
+            const tempInIdeal = currentTemp >= profile.temp[0] && currentTemp <= profile.temp[1];
+            const isViral = profile.matchedType === 'viral' || profile.matchedType === 'mosaic';
+            if (tempInIdeal) {
+                riskScore += 25;
+                riskFactors.push({ positive: true, text: `Temperature (${currentTemp}°C) is optimal for disease activity (${profile.temp[0]}-${profile.temp[1]}°C)` });
+            }
+            if (currentTemp > 30 && isViral) {
+                riskScore += 15;
+                spreadSpeed = 'FAST';
+                riskFactors.push({ positive: true, text: `High temperature (${currentTemp}°C) accelerates viral replication` });
+            }
+
+            // Moisture Analysis (weight: 25%)
+            const moistureInIdeal = currentMoisture >= profile.moisture[0] && currentMoisture <= profile.moisture[1];
+            if (moistureInIdeal) {
+                riskScore += 25;
+                riskFactors.push({ positive: true, text: `Soil moisture (${currentMoisture}%) supports pathogen survival` });
+            } else if (currentMoisture > profile.moisture[1]) {
+                riskScore += 20;
+                riskFactors.push({ positive: true, text: `Excess soil moisture (${currentMoisture}%) creates disease-favorable conditions` });
+            } else {
+                riskFactors.push({ positive: false, text: `Soil moisture (${currentMoisture}%) is not optimal for disease spread` });
+            }
+
+            // Special conditions for Blight and Rust
+            const isBlight = diseaseName.toLowerCase().includes('blight');
+            const isRust = diseaseName.toLowerCase().includes('rust');
+            if ((isBlight || isRust) && currentHumidity > 70) {
+                riskScore = Math.min(100, riskScore + 20);
+                spreadSpeed = 'CRITICAL';
+                riskFactors.push({ positive: true, text: `⚠️ ${isBlight ? 'Blight' : 'Rust'} + High Humidity = CRITICAL spread risk!` });
+            }
+
+            // Determine risk level
+            let riskLevel;
+            if (riskScore >= 75) {
+                riskLevel = 'CRITICAL';
+                spreadSpeed = spreadSpeed === 'CRITICAL' ? 'CRITICAL' : 'FAST';
+            } else if (riskScore >= 50) {
+                riskLevel = 'HIGH';
+                spreadSpeed = spreadSpeed === 'SLOW' ? 'MODERATE' : spreadSpeed;
+            } else if (riskScore >= 25) {
+                riskLevel = 'MEDIUM';
+                spreadSpeed = 'MODERATE';
+            } else {
+                riskLevel = 'LOW';
+                spreadSpeed = 'SLOW';
+            }
+
+            return {
+                riskScore,
+                riskLevel,
+                spreadSpeed,
+                riskFactors,
+                profile
+            };
+        }
+
+        // Perform the full risk analysis
+        function performRiskAnalysis() {
+            const diseaseName = appState.diagnosisData?.disease_name || 'Unknown';
+
+            // Get current values from DOM
+            const tempText = document.getElementById('tempValue').textContent;
+            const humidityText = document.getElementById('humidityValue').textContent;
+            const phText = document.getElementById('phValue').textContent;
+            const moistureText = document.getElementById('moistureValue').textContent;
+
+            const currentTemp = parseFloat(tempText) || 25;
+            const currentHumidity = parseFloat(humidityText) || 60;
+            const currentPh = parseFloat(phText) || 6.5;
+            const currentMoisture = parseFloat(moistureText) || 50;
+
+            // Calculate risk
+            const result = calculateRisk(diseaseName, currentHumidity, currentPh, currentTemp, currentMoisture);
+            const profile = result.profile;
+
+            // Update Gauge
+            updateRiskGauge(result.riskScore, result.riskLevel);
+
+            // Update Risk Level Label
+            const levelLabel = document.getElementById('riskLevelLabel');
+            levelLabel.textContent = result.riskLevel;
+            levelLabel.className = 'risk-level-label ' + result.riskLevel.toLowerCase();
+
+            // Update Speed Label
+            document.getElementById('riskSpeedLabel').textContent = `SPREAD SPEED: ${result.spreadSpeed}`;
+
+            // Update Humidity Comparison
+            document.getElementById('riskCurrentHumidity').textContent = `${currentHumidity}%`;
+            document.getElementById('riskIdealHumidity').textContent = `${profile.humidity[0]}-${profile.humidity[1]}%`;
+            updateMatchIndicator('humidityMatchIndicator', currentHumidity, profile.humidity[0], profile.humidity[1], true);
+
+            // Update pH Comparison
+            document.getElementById('riskCurrentPh').textContent = currentPh.toFixed(1);
+            document.getElementById('riskIdealPh').textContent = `${profile.ph[0]}-${profile.ph[1]}`;
+            updateMatchIndicator('phMatchIndicator', currentPh, profile.ph[0], profile.ph[1], true);
+
+            // Update Temperature Comparison
+            document.getElementById('riskCurrentTemp').textContent = `${currentTemp}°C`;
+            document.getElementById('riskIdealTemp').textContent = `${profile.temp[0]}-${profile.temp[1]}°C`;
+            updateMatchIndicator('tempMatchIndicator', currentTemp, profile.temp[0], profile.temp[1], true);
+
+            // Update Moisture Comparison
+            document.getElementById('riskCurrentMoisture').textContent = `${currentMoisture}%`;
+            document.getElementById('riskIdealMoisture').textContent = `${profile.moisture[0]}-${profile.moisture[1]}%`;
+            updateMatchIndicator('moistureMatchIndicator', currentMoisture, profile.moisture[0], profile.moisture[1], true);
+
+            // Update Prediction Box
+            updatePredictionBox(result, diseaseName, currentHumidity, currentTemp);
+
+            // Update Risk Factors List
+            updateRiskFactors(result.riskFactors);
+        }
+
+        // Update the gauge needle position
+        function updateRiskGauge(score, level) {
+            const needle = document.getElementById('riskNeedle');
+            // Convert score (0-100) to angle (-90 to 90 degrees)
+            const angle = -90 + (score / 100) * 180;
+            needle.style.transform = `translateX(-50%) rotate(${angle}deg)`;
+        }
+
+        // Update match indicator styling
+        function updateMatchIndicator(elementId, current, min, max, dangerIfInRange) {
+            const el = document.getElementById(elementId);
+            const inRange = current >= min && current <= max;
+
+            if (dangerIfInRange) {
+                // For disease conditions, being in range is dangerous
+                if (inRange) {
+                    el.className = 'risk-match-indicator danger';
+                    el.textContent = '⚠️ IN DISEASE-FAVORABLE RANGE';
+                } else if (current < min) {
+                    el.className = 'risk-match-indicator good';
+                    el.textContent = '✓ BELOW DISEASE THRESHOLD';
+                } else {
+                    el.className = 'risk-match-indicator warning';
+                    el.textContent = '⚠️ ABOVE DISEASE THRESHOLD';
+                }
+            } else {
+                if (inRange) {
+                    el.className = 'risk-match-indicator good';
+                    el.textContent = '✓ WITHIN SAFE RANGE';
+                } else {
+                    el.className = 'risk-match-indicator danger';
+                    el.textContent = '⚠️ OUTSIDE SAFE RANGE';
+                }
+            }
+        }
+
+        // Update prediction box
+        function updatePredictionBox(result, diseaseName, humidity, temp) {
+            const box = document.getElementById('riskPredictionBox');
+            const icon = document.getElementById('riskPredictionIcon');
+            const title = document.getElementById('riskPredictionTitle');
+            const text = document.getElementById('riskPredictionText');
+
+            box.className = 'risk-prediction ' + result.riskLevel.toLowerCase();
+            title.className = 'risk-prediction-title ' + result.riskLevel.toLowerCase();
+
+            const predictions = {
+                'CRITICAL': {
+                    icon: '🚨',
+                    title: 'CRITICAL ALERT',
+                    getText: () => `<strong>URGENT:</strong> Current conditions (${humidity}% humidity, ${temp}°C) create a perfect storm for <strong>${diseaseName}</strong>. Expected spread acceleration: <strong>200-300%</strong> within 24-48 hours. Immediate treatment is essential to prevent total crop loss.`
+                },
+                'HIGH': {
+                    icon: '⚠️',
+                    title: 'HIGH RISK WARNING',
+                    getText: () => `Environmental conditions strongly favor <strong>${diseaseName}</strong> proliferation. With ${humidity}% humidity, expect <strong>150-200%</strong> faster spread. Treatment within <strong>24 hours</strong> is recommended to contain the outbreak.`
+                },
+                'MEDIUM': {
+                    icon: '⚡',
+                    title: 'MODERATE RISK',
+                    getText: () => `Current conditions moderately support <strong>${diseaseName}</strong> development. Monitor closely over the next <strong>48-72 hours</strong>. Preventive treatment recommended if humidity rises above 75% or temperature exceeds 28°C.`
+                },
+                'LOW': {
+                    icon: '✅',
+                    title: 'LOW RISK',
+                    getText: () => `Environmental conditions are <strong>not optimal</strong> for rapid <strong>${diseaseName}</strong> spread. Continue monitoring but immediate intervention may not be critical. Focus on preventive measures.`
+                }
+            };
+
+            const pred = predictions[result.riskLevel];
+            icon.textContent = pred.icon;
+            title.textContent = pred.title;
+            text.innerHTML = pred.getText();
+        }
+
+        // Update risk factors list
+        function updateRiskFactors(factors) {
+            const container = document.getElementById('riskFactorsList');
+            container.innerHTML = factors.map(f => `
+                <div class="risk-factor-item ${f.positive ? 'positive' : 'negative'}">
+                    <span class="risk-factor-icon">${f.positive ? '⚠️' : '✓'}</span>
+                    <span class="risk-factor-text">${f.text}</span>
+                </div>
+            `).join('');
+        }
+
+        // Close panel on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && document.getElementById('riskAnalysisPanel').classList.contains('active')) {
+                closeRiskAnalysis();
+            }
+        });
+
+        // ==================== DISEASE PROGRESSION SIMULATOR (TIMELINE) ====================
+
+        // Initialize timeline with the uploaded image
+        function initializeTimeline() {
+            const previewImg = document.getElementById('previewImage');
+            const timelineImg = document.getElementById('timelineImage');
+            if (previewImg && previewImg.src) {
+                timelineImg.src = previewImg.src;
+            }
+            // Reset slider to 0
+            document.getElementById('timelineSlider').value = 0;
+            updateTimelineProgression(0);
+        }
+
+        // Main function to update timeline based on slider value
+        function updateTimelineProgression(days) {
+            days = parseInt(days);
+
+            // Update day display
+            document.getElementById('timelineSliderValue').textContent = days;
+            document.getElementById('timelineDayOverlay').textContent = `DAY ${days}`;
+
+            // Calculate progression values
+            const progression = calculateDiseaseProgression(days);
+
+            // Apply visual effects to image
+            applyImageDecay(days);
+
+            // Update status display
+            updateTimelineStatus(progression);
+
+            // Update stats
+            updateTimelineStats(progression);
+
+            // Show/hide urgency alert
+            const urgencyEl = document.getElementById('timelineUrgency');
+            if (days >= 4) {
+                urgencyEl.classList.add('active');
+            } else {
+                urgencyEl.classList.remove('active');
+            }
+        }
+
+        // Calculate disease progression metrics based on days
+        function calculateDiseaseProgression(days) {
+            let status, yieldLoss, spreadMultiplier, recoveryChance, description;
+
+            if (days <= 3) {
+                // Recoverable stage (Day 0-3)
+                status = 'recoverable';
+                yieldLoss = Math.round(days * 5); // 0-15%
+                spreadMultiplier = 1 + (days * 0.3); // 1x to 1.9x
+                recoveryChance = 95 - (days * 10); // 95% to 65%
+                description = getTimelineDescription('recoverable', days);
+            } else if (days <= 7) {
+                // Severe damage stage (Day 4-7)
+                status = 'severe';
+                yieldLoss = 15 + ((days - 3) * 15); // 30-75%
+                spreadMultiplier = 2 + ((days - 3) * 1.5); // 2x to 8x
+                recoveryChance = 55 - ((days - 3) * 12); // 55% to 7%
+                description = getTimelineDescription('severe', days);
+            } else {
+                // Total loss stage (Day 8-10)
+                status = 'total-loss';
+                yieldLoss = 75 + ((days - 7) * 8); // 83-99%
+                spreadMultiplier = 8 + ((days - 7) * 4); // 8x to 20x
+                recoveryChance = Math.max(0, 7 - ((days - 7) * 3)); // 7% to 1%
+                description = getTimelineDescription('total-loss', days);
+            }
+
+            return {
+                status,
+                yieldLoss: Math.min(99, yieldLoss),
+                spreadMultiplier: spreadMultiplier.toFixed(1),
+                recoveryChance: Math.max(1, recoveryChance),
+                description
+            };
+        }
+
+        // Get description text based on status and days
+        function getTimelineDescription(status, days) {
+            const descriptions = {
+                'recoverable': {
+                    0: "Disease just detected. Immediate treatment will ensure 95%+ recovery. This is the BEST time to act!",
+                    1: "Early infection stage. Treatment now will stop spread completely. High success rate expected.",
+                    2: "Disease establishing. Still highly treatable. Act within 24 hours for best results.",
+                    3: "Infection spreading to nearby tissue. Treatment urgently needed to prevent severe damage."
+                },
+                'severe': {
+                    4: "⚠️ SEVERE: Disease has spread significantly. Partial crop damage unavoidable. Spray immediately!",
+                    5: "⚠️ CRITICAL: Major tissue damage occurring. Every hour of delay increases losses.",
+                    6: "⚠️ EMERGENCY: Disease affecting multiple plants. Quarantine and aggressive treatment needed.",
+                    7: "⚠️ LAST CHANCE: Approaching point of no return. Act NOW or face total crop failure!"
+                },
+                'total-loss': {
+                    8: "🚨 CATASTROPHIC: Massive crop damage. Only partial salvage possible with immediate action.",
+                    9: "🚨 DEVASTATING: Most of crop unsaveable. Disease may spread to neighboring fields.",
+                    10: "🚨 TOTAL LOSS: Complete crop failure. Consider containment to protect other crops."
+                }
+            };
+
+            return descriptions[status][days] || descriptions[status][Object.keys(descriptions[status])[0]];
+        }
+
+        // Apply CSS filters to simulate disease progression
+        function applyImageDecay(days) {
+            const img = document.getElementById('timelineImage');
+            const decayOverlay = document.getElementById('timelineDecayOverlay');
+
+            // Calculate filter values based on days (0-10)
+            const sepia = days * 10; // 0% to 100%
+            const contrast = 100 + (days * 5); // 100% to 150%
+            const brightness = 100 - (days * 6); // 100% to 40%
+            const hueRotate = days * 8; // 0deg to 80deg (towards brown/yellow)
+            const saturate = 100 + (days * 15); // 100% to 250%
+            const grayscale = Math.max(0, (days - 7) * 15); // 0% to 45% (only after day 7)
+
+            // Apply filters to image
+            img.style.filter = `
+                sepia(${sepia}%)
+                contrast(${contrast}%)
+                brightness(${brightness}%)
+                hue-rotate(${hueRotate}deg)
+                saturate(${saturate}%)
+                grayscale(${grayscale}%)
+            `;
+
+            // Update decay overlay height (simulates rot spreading from bottom)
+            const overlayHeight = Math.min(80, days * 8); // 0% to 80%
+            decayOverlay.style.height = `${overlayHeight}%`;
+
+            // Add blur for severe cases
+            if (days >= 8) {
+                img.style.filter += ` blur(${(days - 7) * 0.5}px)`;
+            }
+        }
+
+        // Update the status display
+        function updateTimelineStatus(progression) {
+            const statusEl = document.getElementById('timelineStatus');
+            const iconEl = document.getElementById('timelineStatusIcon');
+            const textEl = document.getElementById('timelineStatusText');
+            const descEl = document.getElementById('timelineStatusDesc');
+
+            // Remove all status classes
+            statusEl.classList.remove('recoverable', 'severe', 'total-loss');
+            textEl.classList.remove('recoverable', 'severe', 'total-loss');
+
+            // Add appropriate class
+            statusEl.classList.add(progression.status);
+            textEl.classList.add(progression.status);
+
+            // Update content based on status
+            const statusConfig = {
+                'recoverable': {
+                    icon: '✅',
+                    text: translations[currentLanguage]?.recoverable || 'RECOVERABLE'
+                },
+                'severe': {
+                    icon: '⚠️',
+                    text: translations[currentLanguage]?.severe || 'SEVERE DAMAGE'
+                },
+                'total-loss': {
+                    icon: '💀',
+                    text: translations[currentLanguage]?.total_loss || 'TOTAL CROP LOSS'
+                }
+            };
+
+            const config = statusConfig[progression.status];
+            iconEl.textContent = config.icon;
+            textEl.textContent = config.text;
+            descEl.textContent = progression.description;
+        }
+
+        // Update statistics display
+        function updateTimelineStats(progression) {
+            const yieldEl = document.getElementById('timelineYieldLoss');
+            const spreadEl = document.getElementById('timelineSpreadArea');
+            const recoveryEl = document.getElementById('timelineRecoveryChance');
+
+            // Update values with color coding
+            yieldEl.textContent = `${progression.yieldLoss}%`;
+            yieldEl.style.color = progression.yieldLoss > 50 ? 'var(--secondary)' :
+                                   progression.yieldLoss > 25 ? 'var(--warning)' : 'var(--primary)';
+
+            spreadEl.textContent = `${progression.spreadMultiplier}x`;
+            spreadEl.style.color = parseFloat(progression.spreadMultiplier) > 5 ? 'var(--secondary)' :
+                                   parseFloat(progression.spreadMultiplier) > 2 ? 'var(--warning)' : 'var(--primary)';
+
+            recoveryEl.textContent = `${progression.recoveryChance}%`;
+            recoveryEl.style.color = progression.recoveryChance < 30 ? 'var(--secondary)' :
+                                     progression.recoveryChance < 60 ? 'var(--warning)' : 'var(--primary)';
+        }
+
+        initializeSession();
+        setTimeout(() => showNotification('ONLINE', 'AGRIVISION ready. Powered by Gemini AI.'), 500);
+
+        // ==================== MULTI-LANGUAGE SUPPORT ====================
+        let currentLanguage = 'en';
+        let voiceModeEnabled = false;
+        let speechSynthesis = window.speechSynthesis;
+
+        // Language code to speech language mapping
+        const speechLanguages = {
+            'en': 'en-IN',
+            'hi': 'hi-IN',
+            'ta': 'ta-IN',
+            'te': 'te-IN',
+            'kn': 'kn-IN',
+            'ml': 'ml-IN',
+            'mr': 'mr-IN',
+            'gu': 'gu-IN',
+            'bn': 'bn-IN',
+            'pa': 'pa-IN',
+            'or': 'or-IN'
+        };
+
+        // Comprehensive translations for all major Indian languages
+        const translations = {
+            en: {
+                // Navigation
+                voice: "VOICE", history: "History", ai_ready: "AI READY",
+                // Hero
+                hero_subtitle: "Plant Disease Detection & Treatment System",
+                hero_tagline: "🤖 AI ADVISES, FARMER DECIDES, ROBOT EXECUTES",
+                initialize_system: "INITIALIZE SYSTEM",
+                // Soil Section
+                soil_data_entry: "🌱 SOIL DATA ENTRY",
+                moisture: "Moisture (%)", ph_level: "pH Level",
+                nitrogen: "Nitrogen (ppm)", phosphorus: "Phosphorus (ppm)", potassium: "Potassium (ppm)",
+                store_soil_data: "💾 STORE SOIL DATA",
+                // Phase 1
+                phase1_title: "🔬 DISEASE DETECTION",
+                upload_leaf: "UPLOAD LEAF IMAGE", upload_hint: "Click to select • JPG/PNG",
+                phone_camera: "📱 PHONE CAMERA STREAM",
+                camera_unavailable: "⚠️ Camera stream unavailable",
+                camera_hint: "Ensure IP Webcam app is running on phone",
+                capture_phone: "📸 CAPTURE FROM PHONE",
+                plant_name_label: "PLANT NAME (Required for accurate detection):",
+                select_plant: "-- SELECT PLANT --",
+                plant_hint: "ℹ️ Plant name helps Gemini AI provide accurate disease-specific detection",
+                specify_plant: "SPECIFY PLANT NAME:",
+                run_diagnosis: "🔍 RUN AI DIAGNOSIS",
+                analyzing: "🔬 ANALYZING WITH GEMINI AI...",
+                confirmed: "CONFIRMED", high_confidence: "HIGH CONFIDENCE",
+                powered_by: "📊 POWERED BY GEMINI 2.0 FLASH AI",
+                ai_prediction: "🤖 AI PREDICTION", disease: "DISEASE", confidence: "CONFIDENCE",
+                severity: "SEVERITY", symptoms_detected: "🧠 SYMPTOMS DETECTED",
+                symptoms: "SYMPTOMS", description: "DESCRIPTION",
+                // Phase 2
+                phase2_title: "🧪 TREATMENT PLANNING",
+                env_conditions: "📊 ENVIRONMENTAL CONDITIONS",
+                temperature: "TEMPERATURE", humidity: "HUMIDITY",
+                soil_moisture: "SOIL MOISTURE", soil_ph: "SOIL PH",
+                chemical_inventory: "🛢️ CHEMICAL INVENTORY",
+                generate_recipe: "📋 GENERATE TREATMENT RECIPE",
+                treatment_recipe: "📝 TREATMENT RECIPE",
+                ingredients: "INGREDIENTS:", mixing_instructions: "MIXING INSTRUCTIONS:",
+                safety_warnings: "⚠️ SAFETY WARNINGS",
+                ppe_required: "PPE REQUIRED:", ppe_items: "Wear gloves, mask, eyewear",
+                weather: "WEATHER:", no_rain: "No rain within 4 hours",
+                harvest: "HARVEST:", wait_harvest: "Wait before harvesting",
+                listen: "Listen",
+                // Phase 3
+                phase3_title: "✅ FARMER APPROVAL & EXECUTION",
+                treatment_summary: "📋 TREATMENT SUMMARY",
+                plant: "PLANT", type: "TYPE", spray: "SPRAY", recipe: "RECIPE:",
+                safety_checklist: "⚠️ SAFETY CHECKLIST",
+                safety1: "I understand safety warnings",
+                safety2: "Weather is suitable",
+                safety3: "Inventory verified",
+                safety4: "I understand harvest wait period",
+                approve_start: "🚜 APPROVE & START SPRAYING",
+                robot_execution: "🤖 ROBOT EXECUTION",
+                initializing: "⚙️ INITIALIZING", mixing: "🧪 MIXING",
+                navigating: "🚜 NAVIGATING", spraying: "💦 SPRAYING", completing: "✅ COMPLETING",
+                treatment_complete: "TREATMENT COMPLETE!",
+                robot_finished: "Robot has finished spraying.",
+                job_id: "JOB ID:", time: "TIME:", chemicals_used: "CHEMICALS USED:",
+                new_diagnosis: "🔄 NEW DIAGNOSIS",
+                // Timeline translations
+                timeline_title: "TIMELINE PREDICTION",
+                timeline_subtitle: "See what happens without treatment",
+                days_label: "DAYS WITHOUT TREATMENT",
+                recoverable: "RECOVERABLE",
+                severe: "SEVERE DAMAGE",
+                total_loss: "TOTAL CROP LOSS",
+                spray_now: "SPRAY NOW TO SAVE YOUR CROP!",
+                yield_loss: "Yield Loss",
+                spread_area: "Spread Area",
+                recovery_chance: "Recovery Chance",
+                // Notifications
+                notification_online: "AGRIVISION ready. Powered by Gemini AI.",
+                notification_uploaded: "Image ready",
+                notification_captured: "Phone camera image uploaded successfully",
+                notification_soil_stored: "Soil parameters saved successfully",
+                notification_complete: "Disease detected",
+                notification_recipe_ready: "Treatment protocol generated"
+            },
+            hi: {
+                voice: "आवाज़", history: "इतिहास", ai_ready: "AI तैयार",
+                hero_subtitle: "पौधों की बीमारी का पता लगाने और उपचार प्रणाली",
+                hero_tagline: "🤖 AI सलाह देता है, किसान निर्णय लेता है, रोबोट काम करता है",
+                initialize_system: "सिस्टम शुरू करें",
+                soil_data_entry: "🌱 मिट्टी डेटा प्रविष्टि",
+                moisture: "नमी (%)", ph_level: "पीएच स्तर",
+                nitrogen: "नाइट्रोजन (ppm)", phosphorus: "फास्फोरस (ppm)", potassium: "पोटेशियम (ppm)",
+                store_soil_data: "💾 मिट्टी डेटा सहेजें",
+                phase1_title: "🔬 बीमारी का पता लगाना",
+                upload_leaf: "पत्ती की तस्वीर अपलोड करें", upload_hint: "चुनने के लिए क्लिक करें • JPG/PNG",
+                phone_camera: "📱 फ़ोन कैमरा स्ट्रीम",
+                camera_unavailable: "⚠️ कैमरा स्ट्रीम उपलब्ध नहीं",
+                camera_hint: "सुनिश्चित करें कि IP Webcam ऐप फोन पर चल रहा है",
+                capture_phone: "📸 फ़ोन से कैप्चर करें",
+                plant_name_label: "पौधे का नाम (सटीक पता लगाने के लिए आवश्यक):",
+                select_plant: "-- पौधा चुनें --",
+                plant_hint: "ℹ️ पौधे का नाम Gemini AI को सटीक बीमारी का पता लगाने में मदद करता है",
+                specify_plant: "पौधे का नाम बताएं:",
+                run_diagnosis: "🔍 AI निदान चलाएं",
+                analyzing: "🔬 GEMINI AI के साथ विश्लेषण हो रहा है...",
+                confirmed: "पुष्टि", high_confidence: "उच्च विश्वास",
+                powered_by: "📊 GEMINI 2.0 FLASH AI द्वारा संचालित",
+                ai_prediction: "🤖 AI भविष्यवाणी", disease: "बीमारी", confidence: "विश्वास",
+                severity: "गंभीरता", symptoms_detected: "🧠 लक्षण पाए गए",
+                symptoms: "लक्षण", description: "विवरण",
+                phase2_title: "🧪 उपचार योजना",
+                env_conditions: "📊 पर्यावरण की स्थिति",
+                temperature: "तापमान", humidity: "नमी",
+                soil_moisture: "मिट्टी की नमी", soil_ph: "मिट्टी का पीएच",
+                chemical_inventory: "🛢️ रासायनिक भंडार",
+                generate_recipe: "📋 उपचार नुस्खा बनाएं",
+                treatment_recipe: "📝 उपचार नुस्खा",
+                ingredients: "सामग्री:", mixing_instructions: "मिश्रण निर्देश:",
+                safety_warnings: "⚠️ सुरक्षा चेतावनी",
+                ppe_required: "PPE आवश्यक:", ppe_items: "दस्ताने, मास्क, चश्मा पहनें",
+                weather: "मौसम:", no_rain: "4 घंटे के भीतर बारिश नहीं",
+                harvest: "फसल:", wait_harvest: "कटाई से पहले प्रतीक्षा करें",
+                listen: "सुनें",
+                phase3_title: "✅ किसान की मंजूरी और क्रियान्वयन",
+                treatment_summary: "📋 उपचार सारांश",
+                plant: "पौधा", type: "प्रकार", spray: "स्प्रे", recipe: "नुस्खा:",
+                safety_checklist: "⚠️ सुरक्षा चेकलिस्ट",
+                safety1: "मैं सुरक्षा चेतावनियों को समझता हूं",
+                safety2: "मौसम उपयुक्त है",
+                safety3: "भंडार सत्यापित",
+                safety4: "मैं फसल प्रतीक्षा अवधि को समझता हूं",
+                approve_start: "🚜 मंजूर करें और छिड़काव शुरू करें",
+                robot_execution: "🤖 रोबोट क्रियान्वयन",
+                initializing: "⚙️ शुरू हो रहा है", mixing: "🧪 मिश्रण",
+                navigating: "🚜 नेविगेशन", spraying: "💦 छिड़काव", completing: "✅ पूर्ण हो रहा है",
+                treatment_complete: "उपचार पूर्ण!",
+                robot_finished: "रोबोट ने छिड़काव पूरा कर लिया।",
+                job_id: "कार्य ID:", time: "समय:", chemicals_used: "उपयोग किए गए रसायन:",
+                new_diagnosis: "🔄 नया निदान",
+                // Timeline translations
+                timeline_title: "समय पूर्वानुमान",
+                timeline_subtitle: "देखें बिना इलाज के क्या होगा",
+                days_label: "बिना इलाज के दिन",
+                recoverable: "बचाव संभव",
+                severe: "गंभीर नुकसान",
+                total_loss: "पूर्ण फसल नष्ट",
+                spray_now: "अभी छिड़काव करें अपनी फसल बचाएं!",
+                yield_loss: "उपज हानि",
+                spread_area: "फैलाव क्षेत्र",
+                recovery_chance: "बचने की संभावना"
+            },
+            ta: {
+                voice: "குரல்", history: "வரலாறு", ai_ready: "AI தயார்",
+                hero_subtitle: "தாவர நோய் கண்டறிதல் & சிகிச்சை அமைப்பு",
+                hero_tagline: "🤖 AI ஆலோசனை, விவசாயி முடிவு, ரோபோ செயல்படுத்தும்",
+                initialize_system: "அமைப்பைத் துவக்கு",
+                soil_data_entry: "🌱 மண் தரவு உள்ளீடு",
+                moisture: "ஈரப்பதம் (%)", ph_level: "pH அளவு",
+                nitrogen: "நைட்ரஜன் (ppm)", phosphorus: "பாஸ்பரஸ் (ppm)", potassium: "பொட்டாசியம் (ppm)",
+                store_soil_data: "💾 மண் தரவைச் சேமி",
+                phase1_title: "🔬 நோய் கண்டறிதல்",
+                upload_leaf: "இலை படத்தை பதிவேற்றவும்", upload_hint: "தேர்வு செய்ய கிளிக் செய்யவும் • JPG/PNG",
+                phone_camera: "📱 தொலைபேசி கேமரா ஸ்ட்ரீம்",
+                camera_unavailable: "⚠️ கேமரா ஸ்ட்ரீம் கிடைக்கவில்லை",
+                camera_hint: "IP Webcam செயலி தொலைபேசியில் இயங்குவதை உறுதி செய்யவும்",
+                capture_phone: "📸 தொலைபேசியில் இருந்து எடுக்கவும்",
+                plant_name_label: "தாவர பெயர் (துல்லியமான கண்டறிதலுக்கு அவசியம்):",
+                select_plant: "-- தாவரத்தைத் தேர்ந்தெடுக்கவும் --",
+                plant_hint: "ℹ️ தாவர பெயர் Gemini AI துல்லியமான நோய் கண்டறிதலுக்கு உதவுகிறது",
+                specify_plant: "தாவர பெயரைக் குறிப்பிடவும்:",
+                run_diagnosis: "🔍 AI நோயறிதலை இயக்கு",
+                analyzing: "🔬 GEMINI AI உடன் பகுப்பாய்வு செய்கிறது...",
+                confirmed: "உறுதிப்படுத்தப்பட்டது", high_confidence: "உயர் நம்பிக்கை",
+                powered_by: "📊 GEMINI 2.0 FLASH AI மூலம் இயங்குகிறது",
+                ai_prediction: "🤖 AI கணிப்பு", disease: "நோய்", confidence: "நம்பிக்கை",
+                severity: "தீவிரம்", symptoms_detected: "🧠 அறிகுறிகள் கண்டறியப்பட்டன",
+                symptoms: "அறிகுறிகள்", description: "விளக்கம்",
+                phase2_title: "🧪 சிகிச்சை திட்டமிடல்",
+                env_conditions: "📊 சுற்றுச்சூழல் நிலைமைகள்",
+                temperature: "வெப்பநிலை", humidity: "ஈரப்பதம்",
+                soil_moisture: "மண் ஈரப்பதம்", soil_ph: "மண் pH",
+                chemical_inventory: "🛢️ இரசாயன சரக்கு",
+                generate_recipe: "📋 சிகிச்சை செய்முறையை உருவாக்கு",
+                treatment_recipe: "📝 சிகிச்சை செய்முறை",
+                ingredients: "பொருட்கள்:", mixing_instructions: "கலவை வழிமுறைகள்:",
+                safety_warnings: "⚠️ பாதுகாப்பு எச்சரிக்கைகள்",
+                ppe_required: "PPE அவசியம்:", ppe_items: "கையுறை, முகமூடி, கண்ணாடி அணியவும்",
+                weather: "வானிலை:", no_rain: "4 மணி நேரத்திற்குள் மழை இல்லை",
+                harvest: "அறுவடை:", wait_harvest: "அறுவடைக்கு முன் காத்திருக்கவும்",
+                listen: "கேளுங்கள்",
+                phase3_title: "✅ விவசாயி ஒப்புதல் & செயல்படுத்தல்",
+                treatment_summary: "📋 சிகிச்சை சுருக்கம்",
+                plant: "தாவரம்", type: "வகை", spray: "தெளிப்பு", recipe: "செய்முறை:",
+                safety_checklist: "⚠️ பாதுகாப்பு சரிபார்ப்புப் பட்டியல்",
+                safety1: "நான் பாதுகாப்பு எச்சரிக்கைகளைப் புரிந்துகொள்கிறேன்",
+                safety2: "வானிலை பொருத்தமானது",
+                safety3: "சரக்கு சரிபார்க்கப்பட்டது",
+                safety4: "அறுவடை காத்திருப்பு காலத்தை புரிந்துகொள்கிறேன்",
+                approve_start: "🚜 ஒப்புதல் & தெளிப்பைத் தொடங்கு",
+                robot_execution: "🤖 ரோபோ செயல்படுத்துதல்",
+                initializing: "⚙️ துவங்குகிறது", mixing: "🧪 கலக்குகிறது",
+                navigating: "🚜 வழிசெலுத்துகிறது", spraying: "💦 தெளிக்கிறது", completing: "✅ முடிக்கிறது",
+                treatment_complete: "சிகிச்சை முடிந்தது!",
+                robot_finished: "ரோபோ தெளிப்பை முடித்துவிட்டது.",
+                job_id: "வேலை ID:", time: "நேரம்:", chemicals_used: "பயன்படுத்திய இரசாயனங்கள்:",
+                new_diagnosis: "🔄 புதிய நோயறிதல்",
+                timeline_title: "காலவரிசை கணிப்பு",
+                timeline_subtitle: "சிகிச்சை இல்லாமல் என்ன நடக்கும் பாருங்கள்",
+                days_label: "சிகிச்சை இல்லாத நாட்கள்",
+                recoverable: "மீட்கக்கூடியது",
+                severe: "கடுமையான சேதம்",
+                total_loss: "முழு பயிர் இழப்பு",
+                spray_now: "இப்போதே தெளிக்கவும் பயிரை காப்பாற்றுங்கள்!"
+            },
+            te: {
+                voice: "వాయిస్", history: "చరిత్ర", ai_ready: "AI సిద్ధం",
+                hero_subtitle: "మొక్కల వ్యాధి గుర్తింపు & చికిత్స వ్యవస్థ",
+                hero_tagline: "🤖 AI సలహా ఇస్తుంది, రైతు నిర్ణయిస్తాడు, రోబో అమలు చేస్తుంది",
+                initialize_system: "సిస్టమ్ ప్రారంభించండి",
+                soil_data_entry: "🌱 నేల డేటా ఎంట్రీ",
+                moisture: "తేమ (%)", ph_level: "pH స్థాయి",
+                nitrogen: "నైట్రోజన్ (ppm)", phosphorus: "ఫాస్ఫరస్ (ppm)", potassium: "పొటాషియం (ppm)",
+                store_soil_data: "💾 నేల డేటా సేవ్ చేయండి",
+                phase1_title: "🔬 వ్యాధి గుర్తింపు",
+                upload_leaf: "ఆకు చిత్రం అప్‌లోడ్ చేయండి", upload_hint: "ఎంచుకోవడానికి క్లిక్ చేయండి • JPG/PNG",
+                phone_camera: "📱 ఫోన్ కెమెరా స్ట్రీమ్",
+                camera_unavailable: "⚠️ కెమెరా స్ట్రీమ్ అందుబాటులో లేదు",
+                camera_hint: "IP Webcam యాప్ ఫోన్‌లో రన్ అవుతుందని నిర్ధారించుకోండి",
+                capture_phone: "📸 ఫోన్ నుండి క్యాప్చర్ చేయండి",
+                plant_name_label: "మొక్క పేరు (సరైన గుర్తింపుకు అవసరం):",
+                select_plant: "-- మొక్క ఎంచుకోండి --",
+                plant_hint: "ℹ️ మొక్క పేరు Gemini AI సరైన వ్యాధి గుర్తింపులో సహాయపడుతుంది",
+                specify_plant: "మొక్క పేరు పేర్కొనండి:",
+                run_diagnosis: "🔍 AI రోగనిర్ధారణ రన్ చేయండి",
+                analyzing: "🔬 GEMINI AI తో విశ్లేషిస్తోంది...",
+                confirmed: "ధృవీకరించబడింది", high_confidence: "అధిక నమ్మకం",
+                powered_by: "📊 GEMINI 2.0 FLASH AI ద్వారా శక్తి",
+                ai_prediction: "🤖 AI అంచనా", disease: "వ్యాధి", confidence: "నమ్మకం",
+                severity: "తీవ్రత", symptoms_detected: "🧠 లక్షణాలు గుర్తించబడ్డాయి",
+                symptoms: "లక్షణాలు", description: "వివరణ",
+                phase2_title: "🧪 చికిత్స ప్రణాళిక",
+                env_conditions: "📊 పర్యావరణ పరిస్థితులు",
+                temperature: "ఉష్ణోగ్రత", humidity: "తేమ",
+                soil_moisture: "నేల తేమ", soil_ph: "నేల pH",
+                chemical_inventory: "🛢️ రసాయన జాబితా",
+                generate_recipe: "📋 చికిత్స రెసిపీ రూపొందించండి",
+                treatment_recipe: "📝 చికిత్స రెసిపీ",
+                ingredients: "పదార్థాలు:", mixing_instructions: "మిక్సింగ్ సూచనలు:",
+                safety_warnings: "⚠️ భద్రతా హెచ్చరికలు",
+                ppe_required: "PPE అవసరం:", ppe_items: "గ్లోవ్స్, మాస్క్, కళ్ళజోడు ధరించండి",
+                weather: "వాతావరణం:", no_rain: "4 గంటల్లో వర్షం లేదు",
+                harvest: "పంట:", wait_harvest: "పంట కోయడానికి ముందు వేచి ఉండండి",
+                listen: "వినండి",
+                phase3_title: "✅ రైతు ఆమోదం & అమలు",
+                treatment_summary: "📋 చికిత్స సారాంశం",
+                plant: "మొక్క", type: "రకం", spray: "స్ప్రే", recipe: "రెసిపీ:",
+                safety_checklist: "⚠️ భద్రతా చెక్‌లిస్ట్",
+                safety1: "నేను భద్రతా హెచ్చరికలను అర్థం చేసుకున్నాను",
+                safety2: "వాతావరణం అనుకూలంగా ఉంది",
+                safety3: "జాబితా ధృవీకరించబడింది",
+                safety4: "పంట వేచి ఉండే వ్యవధిని అర్థం చేసుకున్నాను",
+                approve_start: "🚜 ఆమోదించండి & స్ప్రే ప్రారంభించండి",
+                robot_execution: "🤖 రోబో అమలు",
+                initializing: "⚙️ ప్రారంభిస్తోంది", mixing: "🧪 మిక్సింగ్",
+                navigating: "🚜 నావిగేట్ చేస్తోంది", spraying: "💦 స్ప్రే చేస్తోంది", completing: "✅ పూర్తి చేస్తోంది",
+                treatment_complete: "చికిత్స పూర్తయింది!",
+                robot_finished: "రోబో స్ప్రే పూర్తి చేసింది.",
+                job_id: "జాబ్ ID:", time: "సమయం:", chemicals_used: "ఉపయోగించిన రసాయనాలు:",
+                new_diagnosis: "🔄 కొత్త రోగనిర్ధారణ"
+            },
+            kn: {
+                voice: "ಧ್ವನಿ", history: "ಇತಿಹಾಸ", ai_ready: "AI ಸಿದ್ಧ",
+                hero_subtitle: "ಸಸ್ಯ ರೋಗ ಪತ್ತೆ & ಚಿಕಿತ್ಸಾ ವ್ಯವಸ್ಥೆ",
+                hero_tagline: "🤖 AI ಸಲಹೆ ನೀಡುತ್ತದೆ, ರೈತ ನಿರ್ಧರಿಸುತ್ತಾರೆ, ರೋಬೋ ಕಾರ್ಯಗತಗೊಳಿಸುತ್ತದೆ",
+                initialize_system: "ವ್ಯವಸ್ಥೆ ಪ್ರಾರಂಭಿಸಿ",
+                soil_data_entry: "🌱 ಮಣ್ಣಿನ ದತ್ತಾಂಶ ಪ್ರವೇಶ",
+                moisture: "ತೇವಾಂಶ (%)", ph_level: "pH ಮಟ್ಟ",
+                nitrogen: "ನೈಟ್ರೋಜನ್ (ppm)", phosphorus: "ಫಾಸ್ಫರಸ್ (ppm)", potassium: "ಪೊಟ್ಯಾಸಿಯಮ್ (ppm)",
+                store_soil_data: "💾 ಮಣ್ಣಿನ ದತ್ತಾಂಶ ಉಳಿಸಿ",
+                phase1_title: "🔬 ರೋಗ ಪತ್ತೆ",
+                upload_leaf: "ಎಲೆ ಚಿತ್ರ ಅಪ್‌ಲೋಡ್ ಮಾಡಿ", upload_hint: "ಆಯ್ಕೆ ಮಾಡಲು ಕ್ಲಿಕ್ ಮಾಡಿ • JPG/PNG",
+                phone_camera: "📱 ಫೋನ್ ಕ್ಯಾಮೆರಾ ಸ್ಟ್ರೀಮ್",
+                camera_unavailable: "⚠️ ಕ್ಯಾಮೆರಾ ಸ್ಟ್ರೀಮ್ ಲಭ್ಯವಿಲ್ಲ",
+                camera_hint: "IP Webcam ಅಪ್ಲಿಕೇಶನ್ ಫೋನ್‌ನಲ್ಲಿ ಚಾಲನೆಯಲ್ಲಿದೆ ಎಂದು ಖಚಿತಪಡಿಸಿ",
+                capture_phone: "📸 ಫೋನ್‌ನಿಂದ ಕ್ಯಾಪ್ಚರ್ ಮಾಡಿ",
+                plant_name_label: "ಸಸ್ಯದ ಹೆಸರು (ನಿಖರ ಪತ್ತೆಗೆ ಅಗತ್ಯ):",
+                select_plant: "-- ಸಸ್ಯ ಆಯ್ಕೆಮಾಡಿ --",
+                run_diagnosis: "🔍 AI ರೋಗನಿರ್ಣಯ ರನ್ ಮಾಡಿ",
+                analyzing: "🔬 GEMINI AI ನೊಂದಿಗೆ ವಿಶ್ಲೇಷಿಸಲಾಗುತ್ತಿದೆ...",
+                confirmed: "ದೃಢಪಡಿಸಲಾಗಿದೆ", high_confidence: "ಹೆಚ್ಚಿನ ವಿಶ್ವಾಸ",
+                disease: "ರೋಗ", confidence: "ವಿಶ್ವಾಸ", severity: "ತೀವ್ರತೆ",
+                symptoms: "ಲಕ್ಷಣಗಳು", description: "ವಿವರಣೆ",
+                phase2_title: "🧪 ಚಿಕಿತ್ಸೆ ಯೋಜನೆ",
+                temperature: "ತಾಪಮಾನ", humidity: "ತೇವಾಂಶ",
+                generate_recipe: "📋 ಚಿಕಿತ್ಸಾ ಪಾಕವಿಧಾನ ರಚಿಸಿ",
+                treatment_recipe: "📝 ಚಿಕಿತ್ಸಾ ಪಾಕವಿಧಾನ",
+                ingredients: "ಪದಾರ್ಥಗಳು:", safety_warnings: "⚠️ ಸುರಕ್ಷತಾ ಎಚ್ಚರಿಕೆಗಳು",
+                listen: "ಕೇಳಿ",
+                phase3_title: "✅ ರೈತ ಅನುಮೋದನೆ & ಕಾರ್ಯಗತಗೊಳಿಸುವಿಕೆ",
+                treatment_summary: "📋 ಚಿಕಿತ್ಸಾ ಸಾರಾಂಶ",
+                plant: "ಸಸ್ಯ", spray: "ಸ್ಪ್ರೇ",
+                safety_checklist: "⚠️ ಸುರಕ್ಷತಾ ಪರಿಶೀಲನಾ ಪಟ್ಟಿ",
+                safety1: "ನಾನು ಸುರಕ್ಷತಾ ಎಚ್ಚರಿಕೆಗಳನ್ನು ಅರ್ಥಮಾಡಿಕೊಂಡಿದ್ದೇನೆ",
+                approve_start: "🚜 ಅನುಮೋದಿಸಿ & ಸಿಂಪಡಿಸುವಿಕೆ ಪ್ರಾರಂಭಿಸಿ",
+                treatment_complete: "ಚಿಕಿತ್ಸೆ ಪೂರ್ಣಗೊಂಡಿದೆ!",
+                robot_finished: "ರೋಬೋ ಸಿಂಪಡಿಸುವಿಕೆ ಮುಗಿಸಿದೆ.",
+                new_diagnosis: "🔄 ಹೊಸ ರೋಗನಿರ್ಣಯ"
+            },
+            ml: {
+                voice: "ശബ്ദം", history: "ചരിത്രം", ai_ready: "AI തയ്യാർ",
+                hero_subtitle: "സസ്യ രോഗ കണ്ടെത്തൽ & ചികിത്സാ സംവിധാനം",
+                hero_tagline: "🤖 AI ഉപദേശിക്കുന്നു, കർഷകൻ തീരുമാനിക്കുന്നു, റോബോട്ട് നടപ്പിലാക്കുന്നു",
+                initialize_system: "സിസ്റ്റം ആരംഭിക്കുക",
+                soil_data_entry: "🌱 മണ്ണ് ഡാറ്റ എൻട്രി",
+                moisture: "ഈർപ്പം (%)", ph_level: "pH ലെവൽ",
+                nitrogen: "നൈട്രജൻ (ppm)", phosphorus: "ഫോസ്ഫറസ് (ppm)", potassium: "പൊട്ടാസിയം (ppm)",
+                store_soil_data: "💾 മണ്ണ് ഡാറ്റ സേവ് ചെയ്യുക",
+                phase1_title: "🔬 രോഗ കണ്ടെത്തൽ",
+                upload_leaf: "ഇല ചിത്രം അപ്‌ലോഡ് ചെയ്യുക", upload_hint: "തിരഞ്ഞെടുക്കാൻ ക്ലിക്ക് ചെയ്യുക • JPG/PNG",
+                capture_phone: "📸 ഫോണിൽ നിന്ന് ക്യാപ്ചർ ചെയ്യുക",
+                run_diagnosis: "🔍 AI രോഗനിർണയം നടത്തുക",
+                analyzing: "🔬 GEMINI AI ഉപയോഗിച്ച് വിശകലനം ചെയ്യുന്നു...",
+                confirmed: "സ്ഥിരീകരിച്ചു", high_confidence: "ഉയർന്ന വിശ്വാസം",
+                disease: "രോഗം", confidence: "വിശ്വാസം", severity: "തീവ്രത",
+                symptoms: "ലക്ഷണങ്ങൾ", description: "വിവരണം",
+                phase2_title: "🧪 ചികിത്സാ ആസൂത്രണം",
+                temperature: "താപനില", humidity: "ഈർപ്പം",
+                generate_recipe: "📋 ചികിത്സാ റെസിപ്പി സൃഷ്ടിക്കുക",
+                treatment_recipe: "📝 ചികിത്സാ റെസിപ്പി",
+                ingredients: "ചേരുവകൾ:", safety_warnings: "⚠️ സുരക്ഷാ മുന്നറിയിപ്പുകൾ",
+                listen: "കേൾക്കുക",
+                phase3_title: "✅ കർഷക അംഗീകാരം & നിർവ്വഹണം",
+                treatment_summary: "📋 ചികിത്സാ സംഗ്രഹം",
+                plant: "സസ്യം", spray: "സ്പ്രേ",
+                safety_checklist: "⚠️ സുരക്ഷാ ചെക്ക്‌ലിസ്റ്റ്",
+                safety1: "സുരക്ഷാ മുന്നറിയിപ്പുകൾ മനസ്സിലാക്കി",
+                approve_start: "🚜 അംഗീകരിക്കുക & തളിക്കൽ ആരംഭിക്കുക",
+                treatment_complete: "ചികിത്സ പൂർത്തിയായി!",
+                robot_finished: "റോബോട്ട് തളിക്കൽ പൂർത്തിയാക്കി.",
+                new_diagnosis: "🔄 പുതിയ രോഗനിർണയം"
+            },
+            mr: {
+                voice: "आवाज", history: "इतिहास", ai_ready: "AI तयार",
+                hero_subtitle: "वनस्पती रोग शोध & उपचार प्रणाली",
+                hero_tagline: "🤖 AI सल्ला देते, शेतकरी निर्णय घेतो, रोबोट अंमलबजावणी करतो",
+                initialize_system: "सिस्टम सुरू करा",
+                soil_data_entry: "🌱 माती डेटा एंट्री",
+                moisture: "आर्द्रता (%)", ph_level: "pH पातळी",
+                nitrogen: "नायट्रोजन (ppm)", phosphorus: "फॉस्फरस (ppm)", potassium: "पोटॅशियम (ppm)",
+                store_soil_data: "💾 माती डेटा जतन करा",
+                phase1_title: "🔬 रोग शोध",
+                upload_leaf: "पान प्रतिमा अपलोड करा", upload_hint: "निवडण्यासाठी क्लिक करा • JPG/PNG",
+                capture_phone: "📸 फोनवरून कॅप्चर करा",
+                run_diagnosis: "🔍 AI निदान चालवा",
+                analyzing: "🔬 GEMINI AI सह विश्लेषण करत आहे...",
+                confirmed: "पुष्टी", high_confidence: "उच्च विश्वास",
+                disease: "रोग", confidence: "विश्वास", severity: "तीव्रता",
+                symptoms: "लक्षणे", description: "वर्णन",
+                phase2_title: "🧪 उपचार नियोजन",
+                temperature: "तापमान", humidity: "आर्द्रता",
+                generate_recipe: "📋 उपचार रेसिपी तयार करा",
+                treatment_recipe: "📝 उपचार रेसिपी",
+                ingredients: "साहित्य:", safety_warnings: "⚠️ सुरक्षा चेतावणी",
+                listen: "ऐका",
+                phase3_title: "✅ शेतकरी मंजुरी & अंमलबजावणी",
+                treatment_summary: "📋 उपचार सारांश",
+                plant: "वनस्पती", spray: "फवारणी",
+                safety_checklist: "⚠️ सुरक्षा चेकलिस्ट",
+                safety1: "मला सुरक्षा चेतावणी समजतात",
+                approve_start: "🚜 मंजूर करा आणि फवारणी सुरू करा",
+                treatment_complete: "उपचार पूर्ण!",
+                robot_finished: "रोबोटने फवारणी पूर्ण केली.",
+                new_diagnosis: "🔄 नवीन निदान"
+            },
+            gu: {
+                voice: "અવાજ", history: "ઇતિહાસ", ai_ready: "AI તૈયાર",
+                hero_subtitle: "છોડ રોગ શોધ અને સારવાર સિસ્ટમ",
+                hero_tagline: "🤖 AI સલાહ આપે છે, ખેડૂત નિર્ણય લે છે, રોબોટ અમલ કરે છે",
+                initialize_system: "સિસ્ટમ શરૂ કરો",
+                soil_data_entry: "🌱 માટી ડેટા એન્ટ્રી",
+                moisture: "ભેજ (%)", ph_level: "pH સ્તર",
+                store_soil_data: "💾 માટી ડેટા સાચવો",
+                phase1_title: "🔬 રોગ શોધ",
+                upload_leaf: "પાંદડાનું ચિત્ર અપલોડ કરો",
+                capture_phone: "📸 ફોનમાંથી કેપ્ચર કરો",
+                run_diagnosis: "🔍 AI નિદાન ચલાવો",
+                confirmed: "પુષ્ટિ", disease: "રોગ", confidence: "વિશ્વાસ",
+                phase2_title: "🧪 સારવાર આયોજન",
+                generate_recipe: "📋 સારવાર રેસિપી બનાવો",
+                listen: "સાંભળો",
+                phase3_title: "✅ ખેડૂત મંજૂરી અને અમલ",
+                approve_start: "🚜 મંજૂર કરો અને છંટકાવ શરૂ કરો",
+                treatment_complete: "સારવાર પૂર્ણ!",
+                new_diagnosis: "🔄 નવું નિદાન"
+            },
+            bn: {
+                voice: "ভয়েস", history: "ইতিহাস", ai_ready: "AI প্রস্তুত",
+                hero_subtitle: "উদ্ভিদ রোগ সনাক্তকরণ ও চিকিৎসা সিস্টেম",
+                hero_tagline: "🤖 AI পরামর্শ দেয়, কৃষক সিদ্ধান্ত নেয়, রোবট কাজ করে",
+                initialize_system: "সিস্টেম শুরু করুন",
+                soil_data_entry: "🌱 মাটির ডেটা এন্ট্রি",
+                moisture: "আর্দ্রতা (%)", ph_level: "pH স্তর",
+                store_soil_data: "💾 মাটির ডেটা সংরক্ষণ করুন",
+                phase1_title: "🔬 রোগ সনাক্তকরণ",
+                upload_leaf: "পাতার ছবি আপলোড করুন",
+                capture_phone: "📸 ফোন থেকে ক্যাপচার করুন",
+                run_diagnosis: "🔍 AI রোগ নির্ণয় চালান",
+                confirmed: "নিশ্চিত", disease: "রোগ", confidence: "আস্থা",
+                phase2_title: "🧪 চিকিৎসা পরিকল্পনা",
+                generate_recipe: "📋 চিকিৎসা রেসিপি তৈরি করুন",
+                listen: "শুনুন",
+                phase3_title: "✅ কৃষকের অনুমোদন ও বাস্তবায়ন",
+                approve_start: "🚜 অনুমোদন করুন এবং স্প্রে শুরু করুন",
+                treatment_complete: "চিকিৎসা সম্পন্ন!",
+                new_diagnosis: "🔄 নতুন রোগ নির্ণয়"
+            },
+            pa: {
+                voice: "ਆਵਾਜ਼", history: "ਇਤਿਹਾਸ", ai_ready: "AI ਤਿਆਰ",
+                hero_subtitle: "ਪੌਦੇ ਦੀ ਬਿਮਾਰੀ ਦੀ ਖੋਜ ਅਤੇ ਇਲਾਜ ਪ੍ਰਣਾਲੀ",
+                hero_tagline: "🤖 AI ਸਲਾਹ ਦਿੰਦਾ ਹੈ, ਕਿਸਾਨ ਫੈਸਲਾ ਕਰਦਾ ਹੈ, ਰੋਬੋਟ ਲਾਗੂ ਕਰਦਾ ਹੈ",
+                initialize_system: "ਸਿਸਟਮ ਸ਼ੁਰੂ ਕਰੋ",
+                soil_data_entry: "🌱 ਮਿੱਟੀ ਡਾਟਾ ਐਂਟਰੀ",
+                moisture: "ਨਮੀ (%)", ph_level: "pH ਪੱਧਰ",
+                store_soil_data: "💾 ਮਿੱਟੀ ਡਾਟਾ ਸੇਵ ਕਰੋ",
+                phase1_title: "🔬 ਬਿਮਾਰੀ ਦੀ ਖੋਜ",
+                upload_leaf: "ਪੱਤੇ ਦੀ ਤਸਵੀਰ ਅੱਪਲੋਡ ਕਰੋ",
+                capture_phone: "📸 ਫ਼ੋਨ ਤੋਂ ਕੈਪਚਰ ਕਰੋ",
+                run_diagnosis: "🔍 AI ਤਸ਼ਖ਼ੀਸ ਚਲਾਓ",
+                confirmed: "ਪੁਸ਼ਟੀ", disease: "ਬਿਮਾਰੀ", confidence: "ਭਰੋਸਾ",
+                phase2_title: "🧪 ਇਲਾਜ ਯੋਜਨਾ",
+                generate_recipe: "📋 ਇਲਾਜ ਵਿਧੀ ਬਣਾਓ",
+                listen: "ਸੁਣੋ",
+                phase3_title: "✅ ਕਿਸਾਨ ਮਨਜ਼ੂਰੀ ਅਤੇ ਲਾਗੂ",
+                approve_start: "🚜 ਮਨਜ਼ੂਰ ਕਰੋ ਅਤੇ ਛਿੜਕਾਅ ਸ਼ੁਰੂ ਕਰੋ",
+                treatment_complete: "ਇਲਾਜ ਪੂਰਾ!",
+                new_diagnosis: "🔄 ਨਵੀਂ ਤਸ਼ਖ਼ੀਸ"
+            },
+            or: {
+                voice: "ସ୍ୱର", history: "ଇତିହାସ", ai_ready: "AI ପ୍ରସ୍ତୁତ",
+                hero_subtitle: "ଉଦ୍ଭିଦ ରୋଗ ଚିହ୍ନଟ ଏବଂ ଚିକିତ୍ସା ପ୍ରଣାଳୀ",
+                hero_tagline: "🤖 AI ପରାମର୍ଶ ଦିଏ, ଚାଷୀ ନିଷ୍ପତ୍ତି ନିଏ, ରୋବଟ୍ କାର୍ଯ୍ୟକାରୀ କରେ",
+                initialize_system: "ସିଷ୍ଟମ୍ ଆରମ୍ଭ କରନ୍ତୁ",
+                soil_data_entry: "🌱 ମାଟି ତଥ୍ୟ ପ୍ରବେଶ",
+                moisture: "ଆର୍ଦ୍ରତା (%)", ph_level: "pH ସ୍ତର",
+                store_soil_data: "💾 ମାଟି ତଥ୍ୟ ସଞ୍ଚୟ କରନ୍ତୁ",
+                phase1_title: "🔬 ରୋଗ ଚିହ୍ନଟ",
+                upload_leaf: "ପତ୍ର ଛବି ଅପଲୋଡ୍ କରନ୍ତୁ",
+                capture_phone: "📸 ଫୋନ୍‌ରୁ କ୍ୟାପଚର୍ କରନ୍ତୁ",
+                run_diagnosis: "🔍 AI ରୋଗ ନିର୍ଣ୍ଣୟ ଚଲାନ୍ତୁ",
+                confirmed: "ନିଶ୍ଚିତ", disease: "ରୋଗ", confidence: "ବିଶ୍ୱାସ",
+                phase2_title: "🧪 ଚିକିତ୍ସା ଯୋଜନା",
+                generate_recipe: "📋 ଚିକିତ୍ସା ରେସିପି ତିଆରି କରନ୍ତୁ",
+                listen: "ଶୁଣନ୍ତୁ",
+                phase3_title: "✅ ଚାଷୀ ଅନୁମୋଦନ ଏବଂ କାର୍ଯ୍ୟକାରିତା",
+                approve_start: "🚜 ଅନୁମୋଦନ କରନ୍ତୁ ଏବଂ ସ୍ପ୍ରେ ଆରମ୍ଭ କରନ୍ତୁ",
+                treatment_complete: "ଚିକିତ୍ସା ସମ୍ପୂର୍ଣ୍ଣ!",
+                new_diagnosis: "🔄 ନୂଆ ରୋଗ ନିର୍ଣ୍ଣୟ"
+            }
+        };
+
+        // Change language function
+        function changeLanguage(lang) {
+            currentLanguage = lang;
+            localStorage.setItem('agrivision_language', lang);
+            applyTranslations();
+            if (voiceModeEnabled) {
+                speak(translations[lang].hero_subtitle || "Language changed");
+            }
+            showNotification('🌐', `Language: ${document.getElementById('languageSelect').options[document.getElementById('languageSelect').selectedIndex].text}`);
+        }
+
+        // Apply translations to all elements with data-translate attribute
+        function applyTranslations() {
+            const elements = document.querySelectorAll('[data-translate]');
+            elements.forEach(el => {
+                const key = el.getAttribute('data-translate');
+                if (translations[currentLanguage] && translations[currentLanguage][key]) {
+                    el.textContent = translations[currentLanguage][key];
+                } else if (translations['en'][key]) {
+                    el.textContent = translations['en'][key]; // Fallback to English
+                }
+            });
+        }
+
+        // Toggle voice mode
+        function toggleVoiceMode() {
+            voiceModeEnabled = !voiceModeEnabled;
+            const btn = document.getElementById('voiceToggle');
+            if (voiceModeEnabled) {
+                btn.classList.add('speaking');
+                btn.innerHTML = '🔊 <span data-translate="voice">ON</span>';
+                speak(getVoiceMessage('voice_enabled'));
+                showNotification('🔊', 'Voice mode enabled - I will read out important information');
+            } else {
+                btn.classList.remove('speaking');
+                btn.innerHTML = '🔇 <span data-translate="voice">OFF</span>';
+                speechSynthesis.cancel();
+                showNotification('🔇', 'Voice mode disabled');
+            }
+        }
+
+        // Get voice message based on language
+        function getVoiceMessage(key) {
+            const messages = {
+                en: { voice_enabled: "Voice mode enabled. I will read out important information for you." },
+                hi: { voice_enabled: "आवाज़ मोड चालू है। मैं आपके लिए महत्वपूर्ण जानकारी पढ़कर सुनाऊंगा।" },
+                ta: { voice_enabled: "குரல் பயன்முறை இயக்கப்பட்டது. முக்கிய தகவல்களை படிக்கிறேன்." },
+                te: { voice_enabled: "వాయిస్ మోడ్ ఆన్ చేయబడింది. ముఖ్యమైన సమాచారాన్ని చదువుతాను." },
+                kn: { voice_enabled: "ಧ್ವನಿ ಮೋಡ್ ಸಕ್ರಿಯಗೊಳಿಸಲಾಗಿದೆ." },
+                ml: { voice_enabled: "ശബ്ദ മോഡ് പ്രവർത്തനക്ഷമമാക്കി." },
+                mr: { voice_enabled: "आवाज मोड चालू आहे." },
+                gu: { voice_enabled: "અવાજ મોડ ચાલુ છે." },
+                bn: { voice_enabled: "ভয়েস মোড চালু হয়েছে।" },
+                pa: { voice_enabled: "ਆਵਾਜ਼ ਮੋਡ ਚਾਲੂ ਹੈ।" },
+                or: { voice_enabled: "ସ୍ୱର ମୋଡ୍ ସକ୍ରିୟ।" }
+            };
+            return messages[currentLanguage]?.[key] || messages['en'][key];
+        }
+
+        // Text-to-speech function
+        function speak(text) {
+            if (!speechSynthesis) return;
+            speechSynthesis.cancel(); // Stop any ongoing speech
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = speechLanguages[currentLanguage] || 'en-IN';
+            utterance.rate = 0.9;
+            utterance.pitch = 1;
+
+            // Try to find a voice for the language
+            const voices = speechSynthesis.getVoices();
+            const langVoice = voices.find(v => v.lang.startsWith(speechLanguages[currentLanguage]?.split('-')[0] || 'en'));
+            if (langVoice) utterance.voice = langVoice;
+
+            speechSynthesis.speak(utterance);
+        }
+
+        // Speak diagnosis results
+        function speakDiagnosis() {
+            if (!appState.diagnosisData) return;
+            const d = appState.diagnosisData;
+            const messages = {
+                en: `Disease detected: ${d.disease_name}. Confidence: ${Math.round(d.confidence_score * 100)} percent. Severity: ${d.severity}. ${d.disease_description}`,
+                hi: `बीमारी पाई गई: ${d.disease_name}। विश्वास: ${Math.round(d.confidence_score * 100)} प्रतिशत। गंभीरता: ${d.severity}। ${d.disease_description}`,
+                ta: `நோய் கண்டறியப்பட்டது: ${d.disease_name}. நம்பிக்கை: ${Math.round(d.confidence_score * 100)} சதவீதம். தீவிரம்: ${d.severity}.`,
+                te: `వ్యాధి గుర్తించబడింది: ${d.disease_name}. నమ్మకం: ${Math.round(d.confidence_score * 100)} శాతం. తీవ్రత: ${d.severity}.`,
+                kn: `ರೋಗ ಪತ್ತೆಯಾಗಿದೆ: ${d.disease_name}. ವಿಶ್ವಾಸ: ${Math.round(d.confidence_score * 100)} ಶೇಕಡಾ.`,
+                ml: `രോഗം കണ്ടെത്തി: ${d.disease_name}. വിശ്വാസം: ${Math.round(d.confidence_score * 100)} ശതമാനം.`,
+                mr: `रोग आढळला: ${d.disease_name}. विश्वास: ${Math.round(d.confidence_score * 100)} टक्के.`,
+                gu: `રોગ મળ્યો: ${d.disease_name}. વિશ્વાસ: ${Math.round(d.confidence_score * 100)} ટકા.`,
+                bn: `রোগ সনাক্ত: ${d.disease_name}. আস্থা: ${Math.round(d.confidence_score * 100)} শতাংশ।`,
+                pa: `ਬਿਮਾਰੀ ਮਿਲੀ: ${d.disease_name}. ਭਰੋਸਾ: ${Math.round(d.confidence_score * 100)} ਪ੍ਰਤੀਸ਼ਤ।`,
+                or: `ରୋଗ ଚିହ୍ନଟ: ${d.disease_name}. ବିଶ୍ୱାସ: ${Math.round(d.confidence_score * 100)} ପ୍ରତିଶତ।`
+            };
+            speak(messages[currentLanguage] || messages['en']);
+        }
+
+        // Speak recipe
+        function speakRecipe() {
+            const recipeTitle = document.getElementById('recipeTitle').textContent;
+            const messages = {
+                en: `Treatment recipe ready. Please check the ingredients list and follow the mixing instructions carefully. Remember to wear protective equipment.`,
+                hi: `उपचार नुस्खा तैयार है। कृपया सामग्री सूची देखें और मिश्रण निर्देशों का सावधानी से पालन करें। सुरक्षा उपकरण पहनना याद रखें।`,
+                ta: `சிகிச்சை செய்முறை தயார். பொருட்கள் பட்டியலை சரிபார்க்கவும். கலவை வழிமுறைகளை கவனமாக பின்பற்றவும். பாதுகாப்பு உபகரணங்கள் அணியுங்கள்.`,
+                te: `చికిత్స రెసిపీ సిద్ధంగా ఉంది. పదార్థాల జాబితా చూడండి. మిక్సింగ్ సూచనలను జాగ్రత్తగా పాటించండి.`,
+                kn: `ಚಿಕಿತ್ಸಾ ಪಾಕವಿಧಾನ ಸಿದ್ಧ. ಪದಾರ್ಥಗಳ ಪಟ್ಟಿ ನೋಡಿ. ಸುರಕ್ಷತಾ ಸಲಕರಣೆಗಳನ್ನು ಧರಿಸಿ.`,
+                ml: `ചികിത്സാ റെസിപ്പി തയ്യാർ. ചേരുവകളുടെ പട്ടിക പരിശോധിക്കുക. സുരക്ഷാ ഉപകരണങ്ങൾ ധരിക്കുക.`,
+                mr: `उपचार रेसिपी तयार. साहित्य यादी पहा. सुरक्षा उपकरणे घाला.`,
+                gu: `સારવાર રેસિપી તૈયાર. સામગ્રી યાદી જુઓ. સુરક્ષા સાધનો પહેરો.`,
+                bn: `চিকিৎসা রেসিপি তৈয়ার। উপাদান তালিকা দেখুন। নিরাপত্তা সরঞ্জাম পরুন।`,
+                pa: `ਇਲਾਜ ਵਿਧੀ ਤਿਆਰ। ਸਮੱਗਰੀ ਸੂਚੀ ਦੇਖੋ। ਸੁਰੱਖਿਆ ਸਾਜ਼ੋ-ਸਾਮਾਨ ਪਾਓ।`,
+                or: `ଚିକିତ୍ସା ରେସିପି ପ୍ରସ୍ତୁତ। ସାମଗ୍ରୀ ତାଲିକା ଦେଖନ୍ତୁ। ସୁରକ୍ଷା ଉପକରଣ ପିନ୍ଧନ୍ତୁ।`
+            };
+            speak(messages[currentLanguage] || messages['en']);
+        }
+
+        // Speak summary
+        function speakSummary() {
+            const disease = document.getElementById('summaryDisease').textContent;
+            const plant = document.getElementById('summaryPlant').textContent;
+            const confidence = document.getElementById('summaryConfidence').textContent;
+            const messages = {
+                en: `Treatment summary. Disease: ${disease}. Plant: ${plant}. Confidence: ${confidence}. Please check all safety items before approving.`,
+                hi: `उपचार सारांश। बीमारी: ${disease}। पौधा: ${plant}। विश्वास: ${confidence}। मंजूरी देने से पहले सभी सुरक्षा आइटम जांचें।`,
+                ta: `சிகிச்சை சுருக்கம். நோய்: ${disease}. தாவரம்: ${plant}. நம்பிக்கை: ${confidence}. அனுமதிக்கும் முன் அனைத்து பாதுகாப்பு உருப்படிகளையும் சரிபார்க்கவும்.`,
+                te: `చికిత్స సారాంశం. వ్యాధి: ${disease}. మొక్క: ${plant}. నమ్మకం: ${confidence}. ఆమోదించే ముందు అన్ని భద్రతా అంశాలను తనిఖీ చేయండి.`,
+                kn: `ಚಿಕಿತ್ಸಾ ಸಾರಾಂಶ. ರೋಗ: ${disease}. ಸಸ್ಯ: ${plant}. ವಿಶ್ವಾಸ: ${confidence}.`,
+                ml: `ചികിത്സാ സംഗ്രഹം. രോഗം: ${disease}. സസ്യം: ${plant}. വിശ്വാസം: ${confidence}.`,
+                mr: `उपचार सारांश. रोग: ${disease}. वनस्पती: ${plant}. विश्वास: ${confidence}.`,
+                gu: `સારવાર સારાંશ. રોગ: ${disease}. છોડ: ${plant}. વિશ્વાસ: ${confidence}.`,
+                bn: `চিকিৎসা সংক্ষিপ্তসার. রোগ: ${disease}. উদ্ভিদ: ${plant}. আস্থা: ${confidence}.`,
+                pa: `ਇਲਾਜ ਸਾਰ. ਬਿਮਾਰੀ: ${disease}. ਪੌਦਾ: ${plant}. ਭਰੋਸਾ: ${confidence}.`,
+                or: `ଚିକିତ୍ସା ସାରାଂଶ। ରୋଗ: ${disease}। ଉଦ୍ଭିଦ: ${plant}। ବିଶ୍ୱାସ: ${confidence}।`
+            };
+            speak(messages[currentLanguage] || messages['en']);
+        }
+
+        // Speak completion
+        function speakCompletion() {
+            const messages = {
+                en: "Treatment complete! The robot has finished spraying. Your crop has been treated successfully.",
+                hi: "उपचार पूर्ण! रोबोट ने छिड़काव पूरा कर लिया। आपकी फसल का सफलतापूर्वक उपचार हो गया है।",
+                ta: "சிகிச்சை முடிந்தது! ரோபோ தெளிப்பை முடித்துவிட்டது. உங்கள் பயிர் வெற்றிகரமாக சிகிச்சை செய்யப்பட்டது.",
+                te: "చికిత్స పూర్తయింది! రోబో స్ప్రే పూర్తి చేసింది. మీ పంట విజయవంతంగా చికిత్స చేయబడింది.",
+                kn: "ಚಿಕಿತ್ಸೆ ಪೂರ್ಣ! ರೋಬೋ ಸಿಂಪಡಿಸುವಿಕೆ ಮುಗಿಸಿದೆ.",
+                ml: "ചികിത്സ പൂർത്തിയായി! റോബോട്ട് തളിക്കൽ പൂർത്തിയാക്കി.",
+                mr: "उपचार पूर्ण! रोबोटने फवारणी पूर्ण केली.",
+                gu: "સારવાર પૂર્ણ! રોબોટે છંટકાવ પૂર્ણ કર્યો.",
+                bn: "চিকিৎসা সম্পন্ন! রোবট স্প্রে শেষ করেছে।",
+                pa: "ਇਲਾਜ ਪੂਰਾ! ਰੋਬੋਟ ਨੇ ਛਿੜਕਾਅ ਪੂਰਾ ਕੀਤਾ।",
+                or: "ଚିକିତ୍ସା ସମ୍ପୂର୍ଣ୍ଣ! ରୋବଟ୍ ସ୍ପ୍ରେ ସମାପ୍ତ କରିଛି।"
+            };
+            speak(messages[currentLanguage] || messages['en']);
+        }
+
+        // Auto-speak on important events if voice mode is enabled
+        function autoSpeak(messageKey, customMessage) {
+            if (voiceModeEnabled) {
+                speak(customMessage || getVoiceMessage(messageKey));
+            }
+        }
+
+        // Load saved language preference
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedLang = localStorage.getItem('agrivision_language');
+            if (savedLang) {
+                currentLanguage = savedLang;
+                document.getElementById('languageSelect').value = savedLang;
+                applyTranslations();
+            }
+            // Load voices
+            if (speechSynthesis.onvoiceschanged !== undefined) {
+                speechSynthesis.onvoiceschanged = () => {};
+            }
+        });
+    </script>
+</body>
+</html>

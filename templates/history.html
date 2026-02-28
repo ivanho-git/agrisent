@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌱 AGRI-SENTINEL — Scan History</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --primary: #2e7d32;
+            --primary-light: #4caf50;
+            --primary-dark: #1b5e20;
+            --accent: #ff9800;
+            --bg-light: #f1f8e9;
+            --bg-page: #f5f5f5;
+            --bg-card: #ffffff;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666666;
+            --text-muted: #999999;
+            --border: #e0e0e0;
+            --success: #43a047;
+            --warning: #ff9800;
+            --error: #e53935;
+            --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.1);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: var(--bg-page);
+            min-height: 100vh;
+            color: var(--text-primary);
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow-md);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            text-decoration: none;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .nav-links { display: flex; gap: 8px; }
+
+        .nav-btn {
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            font-family: inherit;
+            border: 2px solid white;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .nav-btn.filled { background: white; color: var(--primary); }
+        .nav-btn.filled:hover { background: var(--accent); border-color: var(--accent); color: white; }
+        .nav-btn.outline { background: transparent; color: white; }
+        .nav-btn.outline:hover { background: white; color: var(--primary); }
+
+        /* Container */
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 24px 16px;
+        }
+
+        /* Page Header */
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+
+        .page-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .record-count {
+            background: var(--primary);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* Card */
+        .card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+
+        /* Table */
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: var(--bg-light);
+            padding: 14px 16px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        td {
+            padding: 14px 16px;
+            font-size: 14px;
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        tr:hover { background: #fafafa; }
+        tr:last-child td { border-bottom: none; }
+
+        .disease-name {
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-high { background: #e8f5e9; color: var(--success); }
+        .badge-medium { background: #fff3e0; color: var(--warning); }
+        .badge-low { background: #ffebee; color: var(--error); }
+
+        .treatment-info {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .date-cell {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 24px;
+        }
+
+        .empty-icon { font-size: 48px; margin-bottom: 16px; }
+        .empty-title { font-size: 18px; font-weight: 600; color: var(--text-primary); margin-bottom: 8px; }
+        .empty-text { font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: inherit;
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(46, 125, 50, 0.3);
+        }
+
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(46, 125, 50, 0.4); }
+
+        /* Mobile */
+        @media (max-width: 600px) {
+            .header { flex-wrap: wrap; gap: 10px; }
+            .nav-links { width: 100%; justify-content: center; }
+            .page-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+            th, td { padding: 10px 12px; font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <a href="/dashboard" class="logo">🌱 AGRI-SENTINEL</a>
+        <div class="nav-links">
+            <a href="/" class="nav-btn filled">🔬 Scan</a>
+            <a href="/dashboard" class="nav-btn outline">🏠 Dashboard</a>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="page-header">
+            <h1 class="page-title">📊 Scan History</h1>
+            {% if records %}
+            <span class="record-count">{{ records|length }} Records</span>
+            {% endif %}
+        </div>
+
+        <div class="card">
+            {% if records and records|length > 0 %}
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Disease</th>
+                            <th>Confidence</th>
+                            <th>Treatment Mix</th>
+                            <th>Mix Time</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in records %}
+                        <tr>
+                            <td class="disease-name">{{ r.disease }}</td>
+                            <td>
+                                {% set conf = r.confidence|float %}
+                                <span class="badge {% if conf >= 0.8 %}badge-high{% elif conf >= 0.5 %}badge-medium{% else %}badge-low{% endif %}">
+                                    {{ (conf * 100)|round(0)|int }}%
+                                </span>
+                            </td>
+                            <td class="treatment-info">
+                                A: {{ r.container_a_ml }}ml, B: {{ r.container_b_ml }}ml, C: {{ r.container_c_ml }}ml
+                            </td>
+                            <td>{{ r.mix_time_seconds }}s</td>
+                            <td class="date-cell">{{ r.created_at[:10] if r.created_at else '-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-icon">🔬</div>
+                <h3 class="empty-title">No Scans Yet</h3>
+                <p class="empty-text">Run your first crop disease detection to see results here</p>
+                <a href="/" class="btn btn-primary">🔬 Start Scanning</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

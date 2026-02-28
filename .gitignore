@@ -1,0 +1,36 @@
+# Environment secrets
+.env
+.env.local
+.env.production
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Temp / test files
+test_out.txt
+check.txt
+check2.txt
+server_out.txt
+server_err.txt
+*.log
+pip_versions.txt
+flycheck.txt
+flyver.txt
+flyauth.txt
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Docker (if unused)
+*.tar
