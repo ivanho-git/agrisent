@@ -15,6 +15,18 @@ services:
         sync: false
       - key: AGROMONITORING_API_KEY
         sync: false
+      - key: SARVAM_API_KEY
+        sync: false
+      - key: MQTT_HOST
+        sync: false
+      - key: MQTT_PORT
+        value: "8883"
+      - key: MQTT_USER
+        sync: false
+      - key: MQTT_PASS
+        sync: false
+      - key: ESP32_DEVICE_TOKEN
+        value: "agri-sentinel-esp32"
       - key: SESSION_SECRET_KEY
         generateValue: true
       - key: ENVIRONMENT

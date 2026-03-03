@@ -27,6 +27,7 @@
 | 📱 **Mobile-First UI** | Agriculture-themed responsive design optimized for phone screens |
 | 🎤 **Market Help Voice AI** | Sarvam AI-powered voice assistant for crop prices, mandi info & selling tips (multilingual) |
 | 💬 **Community Forum** | Link to [AgroBit Forum](https://agrobit-forum.vercel.app/) for farmer-to-farmer discussions |
+| 🤖 **IoT Camera Integration** | ESP32-CAM triggered via MQTT — auto-captures leaf images and runs AI diagnosis remotely |
 
 ---
 

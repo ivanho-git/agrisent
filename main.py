@@ -21,6 +21,9 @@ import math
 from dotenv import load_dotenv
 load_dotenv()
 
+# ─── MQTT Client (lazy-init, non-blocking) ───
+import mqtt_client as mqtt_mod
+
 # ================= INIT =================
 
 app = FastAPI(
@@ -91,7 +94,22 @@ def _save_prediction(user_id, result: dict):
 @app.get("/healthz", include_in_schema=False)
 async def health_check():
     """Health check for Fly.io / load balancers"""
-    return {"status": "ok", "service": "agri-sentinel", "version": "2.0.0"}
+    return {"status": "ok", "service": "agri-sentinel", "version": "2.0.0", "mqtt": mqtt_mod.is_connected()}
+
+# ─── MQTT lifecycle ───
+@app.on_event("startup")
+async def startup_mqtt():
+    """Initialize MQTT client on app startup (non-blocking)."""
+    if mqtt_mod.is_configured():
+        mqtt_mod.get_client()
+        logger.info("MQTT client initialized at startup")
+    else:
+        logger.info("MQTT not configured — skipping IoT initialization")
+
+@app.on_event("shutdown")
+async def shutdown_mqtt():
+    """Gracefully stop MQTT client."""
+    mqtt_mod.shutdown()
 
 @app.get("/api/debug-predictions", include_in_schema=False)
 async def debug_predictions(request: Request):
@@ -284,6 +302,11 @@ async def get_current_user_with_profile(request: Request):
 # ================= SESSION STORAGE =================
 # In-memory session storage (use Redis in production)
 sessions = {}
+# Track which user last triggered IoT analysis (for ESP32 upload linking)
+_last_iot_trigger_user: Optional[str] = None
+# Store last ESP32 captured image (base64) for frontend preview
+_last_esp32_image: Optional[str] = None
+_last_esp32_image_time: Optional[str] = None
 
 # ================= LANDING PAGE =================
 
@@ -890,7 +913,320 @@ async def init_session(request: Request, user: dict = Depends(get_current_user))
     }
     return JSONResponse({"success": True, "session_id": session_id})
 
+# ================= API: IOT — INIT ANALYSIS (MQTT TRIGGER) =================
+
+@app.post("/api/init-analysis")
+async def init_analysis(request: Request, user: dict = Depends(get_current_user)):
+    """
+    Trigger ESP32-CAM capture via MQTT.
+    Publishes START_CAPTURE to agri/camera/capture topic.
+    The ESP32 will capture an image and POST it to /api/esp32/upload.
+    """
+    global _last_iot_trigger_user
+    user_id = user["id"]
+    _last_iot_trigger_user = user_id
+
+    # Check MQTT availability
+    if not mqtt_mod.is_configured():
+        return JSONResponse(
+            {"success": False, "error": "IoT camera not configured. MQTT credentials missing."},
+            status_code=503
+        )
+
+    # Create a session for this analysis
+    session_id = f"iot_{user_id}_{int(__import__('time').time())}"
+    sessions[session_id] = {
+        "image_data": None,
+        "plant_type": None,
+        "diagnosis": None,
+        "recipe": None,
+        "user_id": user_id,
+        "iot_triggered": True,
+    }
+    # Store session_id in user session so upload-image can find it
+    request.session["iot_session_id"] = session_id
+
+    # Publish MQTT trigger
+    published = mqtt_mod.publish_capture_trigger()
+
+    if published:
+        logger.info(f"IoT analysis triggered for user={user_id}, session={session_id}")
+        return JSONResponse({
+            "success": True,
+            "status": "triggered",
+            "session_id": session_id,
+            "message": "Camera capture triggered via MQTT"
+        })
+    else:
+        logger.warning(f"MQTT publish failed for user={user_id}")
+        return JSONResponse({
+            "success": False,
+            "status": "mqtt_error",
+            "error": "Failed to reach camera. MQTT broker may be unavailable."
+        }, status_code=502)
+
+# ================= API: IOT — LATEST PREDICTION (POLLING) =================
+
+@app.get("/api/latest-prediction")
+async def latest_prediction(request: Request, after: str = None):
+    """
+    Poll for the latest prediction for the current user.
+    Optionally pass `after` (ISO timestamp) to only get newer results.
+    Used by frontend polling after IoT analysis trigger.
+    """
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return JSONResponse({"success": False, "error": "Not authenticated"}, status_code=401)
+
+    try:
+        query = supabase.table("predictions") \
+            .select("id, disease, confidence, container_a_ml, container_b_ml, container_c_ml, mix_time_seconds, created_at") \
+            .eq("farmer_id", str(user_id)) \
+            .order("created_at", desc=True) \
+            .limit(1)
+
+        if after:
+            query = query.gt("created_at", after)
+
+        result = query.execute()
+
+        if result.data and len(result.data) > 0:
+            pred = result.data[0]
+            return JSONResponse({
+                "success": True,
+                "has_new": True,
+                "prediction": pred,
+                "has_image": _last_esp32_image is not None,
+                "image_url": "/api/esp32/image.jpg" if _last_esp32_image else None,
+                "image_captured_at": _last_esp32_image_time
+            })
+        else:
+            return JSONResponse({
+                "success": True,
+                "has_new": False,
+                "prediction": None,
+                "has_image": _last_esp32_image is not None,
+                "image_url": "/api/esp32/image.jpg" if _last_esp32_image else None
+            })
+
+    except Exception as e:
+        logger.error(f"Latest prediction error: {e}")
+        return JSONResponse({"success": False, "error": str(e)})
+
+# ================= API: IOT STATUS =================
+
+@app.get("/api/iot-status")
+async def iot_status():
+    """Check if IoT/MQTT is configured and connected."""
+    return JSONResponse({
+        "configured": mqtt_mod.is_configured(),
+        "connected": mqtt_mod.is_connected()
+    })
+
+# ================= API: ESP32 IMAGE PREVIEW =================
+
+@app.get("/api/esp32/latest-image")
+async def esp32_latest_image(request: Request):
+    """
+    Get the last image captured by ESP32-CAM as base64.
+    Used by frontend to show a preview of what the camera captured.
+    """
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return JSONResponse({"success": False, "error": "Not authenticated"}, status_code=401)
+
+    if _last_esp32_image:
+        return JSONResponse({
+            "success": True,
+            "has_image": True,
+            "image_base64": _last_esp32_image,
+            "captured_at": _last_esp32_image_time
+        })
+    else:
+        return JSONResponse({
+            "success": True,
+            "has_image": False,
+            "image_base64": None,
+            "captured_at": None
+        })
+
+@app.get("/api/esp32/image.jpg")
+async def esp32_image_jpg():
+    """
+    Serve the last ESP32 captured image as a raw JPEG.
+    Can be used as <img src="/api/esp32/image.jpg"> in frontend.
+    """
+    if _last_esp32_image:
+        image_bytes = base64.b64decode(_last_esp32_image)
+        return Response(content=image_bytes, media_type="image/jpeg",
+                        headers={"Cache-Control": "no-cache, no-store"})
+    else:
+        return JSONResponse({"error": "No image captured yet"}, status_code=404)
+
 # ================= API: UPLOAD IMAGE =================
+
+# ─── Internal helpers for IoT auto-pipeline ───
+
+async def _run_diagnosis_internal(session_id: str, plant_type: str, user: dict) -> dict | None:
+    """
+    Run Gemini diagnosis on the image in the given session.
+    Returns the diagnosis dict or None on failure.
+    Called internally by IoT auto-pipeline — does NOT require a request.
+    """
+    if session_id not in sessions or not sessions[session_id].get("image_data"):
+        return None
+
+    encoded_image = sessions[session_id]["image_data"]
+
+    # Get latest soil data
+    soil_info = "No soil data available."
+    try:
+        soil_response = supabase.table("soil_logs") \
+            .select("*") \
+            .eq("device_id", "BOT_01") \
+            .order("created_at", desc=True) \
+            .limit(1) \
+            .execute()
+        if soil_response.data:
+            soil = soil_response.data[0]
+            soil_info = f"""
+            Current Soil Conditions:
+            - Moisture: {soil['moisture']}%
+            - pH: {soil['ph']}
+            - Nitrogen (N): {soil['nitrogen']} ppm
+            - Phosphorus (P): {soil['phosphorus']} ppm
+            - Potassium (K): {soil['potassium']} ppm
+            """
+    except Exception:
+        pass
+
+    prompt = f"""
+    You are AGRIVISION, an advanced agricultural AI expert specializing in plant disease detection and treatment recommendations.
+
+    IMPORTANT: The user has identified this plant as: **{plant_type}**
+    
+    Please analyze this {plant_type} plant leaf image carefully for any signs of disease, infection, pest damage, or nutrient deficiency.
+
+    {soil_info}
+
+    Provide a comprehensive diagnosis in the following STRICT JSON format (no extra text, no markdown):
+
+    {{
+        "disease_name": "Name of the detected disease or 'Healthy' if no disease found",
+        "confidence_level": "high/medium/low",
+        "confidence_score": 0.85,
+        "category": "confirmed/probable/insufficient",
+        "plant_identified": "{plant_type}",
+        "symptoms_observed": ["symptom 1", "symptom 2", "symptom 3"],
+        "disease_description": "Brief description of the disease and how it affects the plant",
+        "severity": "mild/moderate/severe",
+        "spread_risk": "low/medium/high",
+        "recommended_treatment": {{
+            "chemical_treatment": "Name of recommended fungicide/pesticide",
+            "organic_alternative": "Organic treatment option if available",
+            "application_method": "How to apply the treatment",
+            "frequency": "How often to apply"
+        }},
+        "prevention_tips": ["tip 1", "tip 2"],
+        "container_a_ml": 10,
+        "container_b_ml": 20,
+        "container_c_ml": 30,
+        "mix_time_seconds": 300,
+        "harvest_wait_days": 14
+    }}
+
+    Be specific to {plant_type} diseases. If you cannot identify the plant clearly, still provide your best assessment based on visible symptoms.
+    """
+
+    try:
+        response = model.generate_content([
+            prompt,
+            {"mime_type": "image/jpeg", "data": encoded_image}
+        ])
+
+        cleaned = response.text.strip()
+        if cleaned.startswith("```json"):
+            cleaned = cleaned[7:]
+        if cleaned.startswith("```"):
+            cleaned = cleaned[3:]
+        if cleaned.endswith("```"):
+            cleaned = cleaned[:-3]
+        cleaned = cleaned.strip()
+
+        result = json.loads(cleaned)
+
+        diagnosis = {
+            "disease_name": result.get("disease_name", "Unknown"),
+            "confidence_level": result.get("confidence_level", "medium"),
+            "confidence_score": result.get("confidence_score", 0.5),
+            "category": result.get("category", "probable"),
+            "plant_identified": result.get("plant_identified", plant_type),
+            "symptoms_observed": result.get("symptoms_observed", []),
+            "disease_description": result.get("disease_description", ""),
+            "severity": result.get("severity", "moderate"),
+            "spread_risk": result.get("spread_risk", "medium"),
+            "recommended_treatment": result.get("recommended_treatment", {}),
+            "prevention_tips": result.get("prevention_tips", []),
+            "container_a_ml": result.get("container_a_ml", 10),
+            "container_b_ml": result.get("container_b_ml", 20),
+            "container_c_ml": result.get("container_c_ml", 30),
+            "mix_time_seconds": result.get("mix_time_seconds", 300),
+            "harvest_wait_days": result.get("harvest_wait_days", 14),
+        }
+
+        # Save prediction to DB
+        try:
+            user_id = user.get("id") if user else sessions[session_id].get("user_id")
+            _save_prediction(user_id, result)
+            logger.info(f"IoT pipeline saved prediction for user={user_id}, disease={diagnosis['disease_name']}")
+        except Exception as db_err:
+            logger.error(f"IoT pipeline DB error: {db_err}")
+
+        return diagnosis
+
+    except Exception as e:
+        logger.error(f"IoT diagnosis error: {e}")
+        return None
+
+
+def _run_recipe_internal(session_id: str) -> dict | None:
+    """
+    Generate treatment recipe for the given session's diagnosis.
+    Returns recipe dict or None.
+    """
+    if session_id not in sessions or not sessions[session_id].get("diagnosis"):
+        return None
+
+    diagnosis = sessions[session_id]["diagnosis"]
+
+    recipe = {
+        "recipe_name": f"Treatment for {diagnosis.get('disease_name', 'Unknown Disease')}",
+        "recipe": [
+            {"chemical": "COPPER FUNGICIDE", "amount_ml": diagnosis.get("container_a_ml", 250)},
+            {"chemical": "MANCOZEB", "amount_ml": diagnosis.get("container_b_ml", 150)},
+            {"chemical": "SURFACTANT", "amount_ml": diagnosis.get("container_c_ml", 50)},
+            {"chemical": "WATER", "amount_ml": 10000}
+        ],
+        "mixing_steps": [
+            "Fill spray tank with 5 liters of clean water",
+            "Add copper fungicide and mix thoroughly for 30 seconds",
+            "Slowly add mancozeb powder while stirring continuously",
+            "Add surfactant for better leaf adhesion",
+            "Top up with remaining 5 liters of water",
+            f"Stir mixture for {diagnosis.get('mix_time_seconds', 300) // 60} minutes before use"
+        ],
+        "safety_warnings": [
+            "PPE REQUIRED: Wear gloves, mask, and protective eyewear",
+            "WEATHER: Do not spray if rain expected within 4 hours",
+            "TEMPERATURE: Apply when temperature is below 30°C",
+            "WIND: Avoid spraying in windy conditions (>15 km/h)",
+            f"HARVEST: Wait {diagnosis.get('harvest_wait_days', 14)} days before harvesting treated plants"
+        ],
+        "total_mix_time_seconds": diagnosis.get("mix_time_seconds", 300)
+    }
+
+    sessions[session_id]["recipe"] = recipe
+    return recipe
 
 @app.post("/api/upload-image")
 async def upload_image(request: Request, image: UploadFile = File(...), session_id: str = Form(...), user: dict = Depends(get_current_user)):
@@ -903,6 +1239,105 @@ async def upload_image(request: Request, image: UploadFile = File(...), session_
         sessions[session_id] = {"image_data": encoded_image, "plant_type": None, "diagnosis": None, "recipe": None, "user_id": user["id"]}
 
     return JSONResponse({"success": True, "message": "Image uploaded successfully"})
+
+# ================= API: ESP32 RAW IMAGE UPLOAD (NO AUTH — IoT DEVICE) =================
+
+@app.post("/api/esp32/upload")
+async def esp32_upload(request: Request):
+    """
+    Endpoint for ESP32-CAM to upload raw JPEG images.
+    NO authentication required (ESP32 cannot carry session cookies).
+
+    Flow:
+    1. ESP32 captures image after MQTT trigger
+    2. ESP32 POSTs raw JPEG here
+    3. Backend auto-runs Gemini AI diagnosis
+    4. Result saved to predictions table (linked to farmer who triggered)
+    5. Frontend polling picks up the new prediction
+    """
+    global _last_iot_trigger_user, _last_esp32_image, _last_esp32_image_time
+
+    # Basic device validation via header (optional)
+    device_token = request.headers.get("X-Device-Token", "")
+    expected_token = os.environ.get("ESP32_DEVICE_TOKEN", "agri-sentinel-esp32")
+
+    if device_token and device_token != expected_token:
+        logger.warning("ESP32 upload rejected: invalid device token")
+        return JSONResponse({"success": False, "error": "Invalid device token"}, status_code=403)
+
+    # Read raw JPEG body
+    body = await request.body()
+
+    if not body or len(body) < 500:
+        logger.warning(f"ESP32 upload rejected: image too small ({len(body)} bytes)")
+        return JSONResponse({"success": False, "error": "Image too small or empty"}, status_code=400)
+
+    logger.info(f"ESP32 image received: {len(body)} bytes")
+
+    # Encode to base64
+    encoded_image = base64.b64encode(body).decode()
+
+    # Store globally for frontend preview
+    _last_esp32_image = encoded_image
+    _last_esp32_image_time = datetime.utcnow().isoformat()
+
+    # Find the user who triggered the analysis
+    user_id = _last_iot_trigger_user
+    if not user_id:
+        for sid, sess in sessions.items():
+            if sess.get("iot_triggered") and not sess.get("image_data"):
+                user_id = sess.get("user_id")
+                break
+
+    if not user_id:
+        logger.warning("ESP32 upload: no linked user found, saving as ANONYMOUS")
+        user_id = "ANONYMOUS"
+
+    # Create IoT session
+    session_id = f"esp32_{int(__import__('time').time())}"
+    sessions[session_id] = {
+        "image_data": encoded_image,
+        "plant_type": "Auto-detected",
+        "diagnosis": None,
+        "recipe": None,
+        "user_id": user_id,
+        "iot_triggered": True,
+    }
+
+    logger.info(f"ESP32 session created: {session_id}, user={user_id}")
+
+    # Auto-run AI diagnosis
+    try:
+        plant_type = "Crop Plant"
+        try:
+            if user_id and user_id != "ANONYMOUS":
+                profile_resp = supabase.table("farmer_profiles").select("crop_name").eq("user_id", user_id).single().execute()
+                if profile_resp.data and profile_resp.data.get("crop_name"):
+                    plant_type = profile_resp.data["crop_name"]
+        except Exception:
+            pass
+
+        user_dict = {"id": user_id}
+        diagnosis = await _run_diagnosis_internal(session_id, plant_type, user_dict)
+
+        if diagnosis:
+            sessions[session_id]["diagnosis"] = diagnosis
+            _run_recipe_internal(session_id)
+            logger.info(f"ESP32 auto-diagnosis complete: {diagnosis.get('disease_name', 'Unknown')}")
+            return JSONResponse({
+                "success": True,
+                "message": "Image received and analyzed",
+                "disease": diagnosis.get("disease_name", "Unknown"),
+                "confidence": diagnosis.get("confidence_score", 0),
+                "session_id": session_id
+            })
+        else:
+            logger.error("ESP32 auto-diagnosis returned None")
+            return JSONResponse({"success": True, "message": "Image received but diagnosis failed"}, status_code=200)
+
+    except Exception as e:
+        logger.error(f"ESP32 auto-diagnosis error: {e}")
+        return JSONResponse({"success": False, "error": f"Analysis failed: {str(e)}"}, status_code=500)
 
 # ================= API: PHONE CAMERA PROXY =================
 
