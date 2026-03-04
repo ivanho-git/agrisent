@@ -1229,7 +1229,32 @@ def _run_recipe_internal(session_id: str) -> dict | None:
     return recipe
 
 @app.post("/api/upload-image")
-async def upload_image(request: Request, image: UploadFile = File(...), session_id: str = Form(...), user: dict = Depends(get_current_user)):
+async def upload_image(request: Request):
+    """
+    Smart upload handler:
+    - If Content-Type is image/jpeg (raw bytes from ESP32) → route to ESP32 auto-pipeline
+    - If Content-Type is multipart/form-data (browser upload) → manual upload flow
+    """
+    content_type = request.headers.get("content-type", "")
+
+    # ── ESP32 raw JPEG upload (no auth, no form data) ──
+    if "image/jpeg" in content_type or "image/png" in content_type:
+        logger.info("upload-image: detected raw image from ESP32, routing to auto-pipeline")
+        return await esp32_upload(request)
+
+    # ── Browser manual upload (multipart form with auth) ──
+    try:
+        user = await get_current_user(request)
+    except HTTPException:
+        return JSONResponse({"success": False, "error": "Not authenticated"}, status_code=401)
+
+    form = await request.form()
+    image = form.get("image")
+    session_id = form.get("session_id", "")
+
+    if not image:
+        return JSONResponse({"success": False, "error": "No image provided"}, status_code=400)
+
     contents = await image.read()
     encoded_image = base64.b64encode(contents).decode()
 

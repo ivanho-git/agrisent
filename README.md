@@ -43,6 +43,7 @@
 | **Voice AI** | Sarvam AI (STT, LLM, TTS — multilingual) |
 | **Frontend** | Jinja2 Templates + Vanilla JS (no framework overhead) |
 | **Auth** | Session-based (phone-number login, no OTP) |
+| **IoT** | ESP32-CAM + MQTT (HiveMQ Cloud) for remote camera trigger |
 | **Deployment** | Render (Web Service) |
 
 ---
@@ -52,6 +53,8 @@
 ```
 agri-sentinel/
 ├── main.py                  # FastAPI application (all routes & logic)
+├── mqtt_client.py           # MQTT client module for ESP32-CAM trigger
+├── esp32_cam_mqtt.ino       # Arduino sketch for ESP32-CAM (MQTT + HTTPS upload)
 ├── requirements.txt         # Python dependencies (pinned versions)
 ├── render.yaml              # Render deployment config
 ├── supabase_setup.sql       # SQL migrations for Supabase
@@ -61,7 +64,7 @@ agri-sentinel/
 │   ├── login.html           # Phone-number login page
 │   ├── onboarding.html      # Farmer profile form (Field/Garden)
 │   ├── dashboard.html       # Main dashboard with weather, stats, map
-│   ├── index.html           # Crop scan page (AI diagnosis)
+│   ├── index.html           # Crop scan page (AI diagnosis + IoT trigger)
 │   ├── market-help.html     # Voice assistant for market prices
 │   └── history.html         # Past scan records
 └── README.md
@@ -316,6 +319,7 @@ All pages are fully responsive and optimized for mobile:
 - [ ] Multi-language support (Hindi, Telugu, Tamil, etc.)
 - [ ] Push notifications for disease alerts
 - [ ] IoT sensor integration for real-time soil monitoring
+- [x] ESP32-CAM integration with MQTT-triggered image capture
 - [ ] Crop calendar with scheduled reminders
 - [ ] Marketplace for farming supplies
 - [ ] Offline mode with PWA support

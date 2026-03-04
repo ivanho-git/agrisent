@@ -2298,6 +2298,22 @@
             50% { box-shadow: 0 0 0 12px rgba(5,150,105,0); }
         }
 
+        @keyframes shimmerBar {
+            0% { opacity: 0.4; transform: translateX(-100%); }
+            50% { opacity: 1; }
+            100% { opacity: 0.4; transform: translateX(100%); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.8); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         #iotAnalyzeBtn:not(:disabled):hover {
             transform: translateY(-3px);
             box-shadow: 0 12px 36px rgba(5,150,105,.35);
@@ -2427,10 +2443,16 @@
                                 </div>
                             </div>
 
-                            <!-- ESP32 Image Preview (shown when image arrives) -->
-                            <div id="iotImagePreview" style="display:none; margin:16px auto; max-width:320px;">
-                                <p style="font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px;">📷 Captured Image</p>
-                                <img id="iotPreviewImg" src="" alt="ESP32 Capture" style="width:100%; border:3px solid var(--green-500); border-radius:var(--r); box-shadow:var(--shadow-md);">
+                            <!-- ESP32 Image Preview (shown when image arrives during scanning) -->
+                            <div id="iotImagePreview" style="display:none; margin:20px auto; max-width:320px; animation: fadeInUp .5s ease;">
+                                <div style="background:linear-gradient(135deg, #ecfdf5, #e0f2fe); border:2px solid var(--green-400); border-radius:var(--r-lg); padding:12px; position:relative; overflow:hidden;">
+                                    <div style="position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg, var(--green-500), var(--sun-500), var(--green-500)); animation: shimmerBar 2s linear infinite;"></div>
+                                    <p style="font-size:11px; font-weight:700; color:#047857; text-transform:uppercase; letter-spacing:.5px; margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+                                        <span style="display:inline-block; width:8px; height:8px; background:#10b981; border-radius:50%; animation: pulse 1.5s ease-in-out infinite;"></span>
+                                        📷 Captured Image — AI Analyzing...
+                                    </p>
+                                    <img id="iotPreviewImg" src="" alt="ESP32 Capture" style="width:100%; border-radius:var(--r-sm); box-shadow:var(--shadow-md); display:block;">
+                                </div>
                             </div>
 
                             <!-- Step indicators -->
@@ -4403,9 +4425,11 @@
         // ════════════════════════════════════════════════════════════
 
         let iotPollingInterval = null;       // polling timer handle
+        let iotImagePollInterval = null;     // image polling timer handle
         let iotAnalysisTimestamp = null;      // ISO string to detect new predictions
         let iotLastPredictionId = null;       // last known prediction ID for dedup
         let iotPollCount = 0;                 // current poll iteration
+        let iotImageFound = false;            // whether we've already found the ESP32 image
         const IOT_MAX_POLLS = 60;             // max polls (~3 min at 3s interval)
 
         // ── IoT status messages cycling ──
@@ -4473,6 +4497,7 @@
             // Record timestamp for polling dedup
             iotAnalysisTimestamp = new Date().toISOString();
             iotPollCount = 0;
+            iotImageFound = false;
 
             // Initial UI
             updateIoTScanUI('📡', '📡 Triggering camera...', 'Sending MQTT signal to ESP32-CAM in the field', 5, 1);
@@ -4503,8 +4528,9 @@
                     }, idx * 2500);
                 });
 
-                // ── Start polling for result ──
+                // ── Start polling for result AND image ──
                 startIoTPoll();
+                startIoTImagePoll();
 
             } catch (e) {
                 if (e.message !== 'Session expired') {
@@ -4545,6 +4571,7 @@
 
                         iotLastPredictionId = data.prediction.id || null;
                         stopIoTPoll();
+                        stopIoTImagePoll();
                         displayIoTResult(data.prediction);
                     }
                 } catch (e) {
@@ -4556,6 +4583,71 @@
         }
 
         /**
+         * Poll for ESP32 captured image every 2 seconds during scanning.
+         * Shows the image preview as soon as the camera capture arrives,
+         * BEFORE the Gemini AI diagnosis is complete.
+         */
+        function startIoTImagePoll() {
+            if (iotImagePollInterval) clearInterval(iotImagePollInterval);
+            iotImageFound = false;
+
+            iotImagePollInterval = setInterval(async () => {
+                // Stop if image already found or no longer scanning
+                if (iotImageFound) {
+                    stopIoTImagePoll();
+                    return;
+                }
+                const scanningEl = document.getElementById('iotScanningState');
+                if (!scanningEl || scanningEl.style.display === 'none') {
+                    stopIoTImagePoll();
+                    return;
+                }
+
+                try {
+                    const resp = await authFetch('/api/esp32/latest-image');
+                    const data = await resp.json();
+
+                    if (data.success && data.has_image && data.captured_at) {
+                        // Only show if captured AFTER we triggered the analysis
+                        if (iotAnalysisTimestamp && data.captured_at > iotAnalysisTimestamp) {
+                            iotImageFound = true;
+                            stopIoTImagePoll();
+
+                            // Show the image in the scanning UI
+                            const previewImg = document.getElementById('iotPreviewImg');
+                            const previewWrap = document.getElementById('iotImagePreview');
+                            if (previewImg && previewWrap) {
+                                // Use the raw JPEG endpoint with cache-bust
+                                previewImg.src = '/api/esp32/image.jpg?t=' + Date.now();
+                                previewWrap.style.display = 'block';
+                                // Smooth fade-in
+                                previewWrap.style.opacity = '0';
+                                previewWrap.style.transition = 'opacity 0.5s ease';
+                                setTimeout(() => { previewWrap.style.opacity = '1'; }, 50);
+                            }
+
+                            // Update scanning status to show image received
+                            updateIoTScanUI('🧠', '🧠 Running AI diagnosis...', 'Image captured! Gemini AI is analyzing the leaf...', 70, 3);
+                        }
+                    }
+                } catch (e) {
+                    // Silent — keep polling
+                    console.warn('Image poll error:', e.message);
+                }
+            }, 2000);
+        }
+
+        /**
+         * Stop image polling
+         */
+        function stopIoTImagePoll() {
+            if (iotImagePollInterval) {
+                clearInterval(iotImagePollInterval);
+                iotImagePollInterval = null;
+            }
+        }
+
+        /**
          * Stop polling
          */
         function stopIoTPoll() {
@@ -4563,6 +4655,7 @@
                 clearInterval(iotPollingInterval);
                 iotPollingInterval = null;
             }
+            stopIoTImagePoll();
         }
 
         /**
@@ -4591,11 +4684,25 @@
             const ts = prediction.created_at ? new Date(prediction.created_at).toLocaleString() : new Date().toLocaleString();
             document.getElementById('iotResultTimestamp').textContent = 'Analyzed at ' + ts;
 
-            // Show ESP32 image preview if we have one from the scanning phase
-            const previewImg = document.getElementById('iotPreviewImg');
-            if (previewImg && previewImg.src && previewImg.src !== window.location.href) {
-                document.getElementById('iotResultImageWrap').style.display = 'block';
-                document.getElementById('iotResultImage').src = previewImg.src;
+            // Always try to show ESP32 captured image in result card
+            const resultImgWrap = document.getElementById('iotResultImageWrap');
+            const resultImg = document.getElementById('iotResultImage');
+            if (resultImgWrap && resultImg) {
+                if (iotImageFound) {
+                    // Image was already fetched during scanning — use it
+                    resultImg.src = '/api/esp32/image.jpg?t=' + Date.now();
+                    resultImgWrap.style.display = 'block';
+                } else {
+                    // Try fetching now (image may have arrived)
+                    fetch('/api/esp32/image.jpg?t=' + Date.now())
+                        .then(r => {
+                            if (r.ok) {
+                                resultImg.src = '/api/esp32/image.jpg?t=' + Date.now();
+                                resultImgWrap.style.display = 'block';
+                            }
+                        })
+                        .catch(() => { /* no image available */ });
+                }
             }
 
             // Notification
@@ -4607,6 +4714,7 @@
          */
         function showIoTError(message) {
             stopIoTPoll();
+            stopIoTImagePoll();
             setIoTState('iotErrorState');
             document.getElementById('iotErrorMessage').textContent = message || 'An unknown error occurred.';
         }
@@ -4616,6 +4724,7 @@
          */
         function cancelIoTAnalysis() {
             stopIoTPoll();
+            stopIoTImagePoll();
             resetIoTAnalysis();
             showNotification('CANCELLED', 'IoT scan cancelled');
         }
@@ -4625,14 +4734,20 @@
          */
         function resetIoTAnalysis() {
             stopIoTPoll();
+            stopIoTImagePoll();
             iotPollCount = 0;
             iotAnalysisTimestamp = null;
+            iotImageFound = false;
             setIoTState('iotIdleState');
 
             // Reset scan UI
             updateIoTScanUI('📡', '📡 Triggering camera...', 'Sending signal to ESP32-CAM', 0, 0);
             document.getElementById('iotImagePreview').style.display = 'none';
             document.getElementById('iotResultImageWrap').style.display = 'none';
+
+            // Clear preview image src to avoid stale images on next scan
+            const previewImg = document.getElementById('iotPreviewImg');
+            if (previewImg) previewImg.src = '';
 
             // Show mode toggle
             const toggleBtn = document.getElementById('iotToManualBtn');
