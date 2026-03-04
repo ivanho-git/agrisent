@@ -145,6 +145,20 @@ class LoginRequest(BaseModel):
             raise ValueError("Invalid phone number. Must be at least 10 digits.")
         return cleaned
 
+class ImageReadyRequest(BaseModel):
+    """Request body when ESP32 notifies that image is uploaded to Supabase Storage."""
+    image_url: str
+    device_id: str = "esp32_cam_1"
+
+    @field_validator('image_url')
+    @classmethod
+    def validate_image_url(cls, v):
+        if not v.startswith("https://") or "supabase.co" not in v:
+            raise ValueError("image_url must be a valid Supabase Storage public URL")
+        if not v.lower().endswith((".jpg", ".jpeg", ".png")):
+            raise ValueError("image_url must point to a .jpg, .jpeg, or .png file")
+        return v
+
 class OnboardingRequest(BaseModel):
     farmer_name: str
     village: str
@@ -304,8 +318,8 @@ async def get_current_user_with_profile(request: Request):
 sessions = {}
 # Track which user last triggered IoT analysis (for ESP32 upload linking)
 _last_iot_trigger_user: Optional[str] = None
-# Store last ESP32 captured image (base64) for frontend preview
-_last_esp32_image: Optional[str] = None
+# Store last ESP32 captured image URL (Supabase Storage) for frontend preview
+_last_esp32_image_url: Optional[str] = None
 _last_esp32_image_time: Optional[str] = None
 
 # ================= LANDING PAGE =================
@@ -920,7 +934,8 @@ async def init_analysis(request: Request, user: dict = Depends(get_current_user)
     """
     Trigger ESP32-CAM capture via MQTT.
     Publishes START_CAPTURE to agri/camera/capture topic.
-    The ESP32 will capture an image and POST it to /api/esp32/upload.
+    The ESP32 will capture an image, upload to Supabase Storage,
+    then call /api/esp32/image-ready with the image URL.
     """
     global _last_iot_trigger_user
     user_id = user["id"]
@@ -996,8 +1011,8 @@ async def latest_prediction(request: Request, after: str = None):
                 "success": True,
                 "has_new": True,
                 "prediction": pred,
-                "has_image": _last_esp32_image is not None,
-                "image_url": "/api/esp32/image.jpg" if _last_esp32_image else None,
+                "has_image": _last_esp32_image_url is not None,
+                "image_url": _last_esp32_image_url,
                 "image_captured_at": _last_esp32_image_time
             })
         else:
@@ -1005,8 +1020,8 @@ async def latest_prediction(request: Request, after: str = None):
                 "success": True,
                 "has_new": False,
                 "prediction": None,
-                "has_image": _last_esp32_image is not None,
-                "image_url": "/api/esp32/image.jpg" if _last_esp32_image else None
+                "has_image": _last_esp32_image_url is not None,
+                "image_url": _last_esp32_image_url
             })
 
     except Exception as e:
@@ -1028,38 +1043,37 @@ async def iot_status():
 @app.get("/api/esp32/latest-image")
 async def esp32_latest_image(request: Request):
     """
-    Get the last image captured by ESP32-CAM as base64.
+    Get the last image captured by ESP32-CAM.
+    Returns the Supabase Storage public URL for the image.
     Used by frontend to show a preview of what the camera captured.
     """
     user_id = request.session.get("user_id")
     if not user_id:
         return JSONResponse({"success": False, "error": "Not authenticated"}, status_code=401)
 
-    if _last_esp32_image:
+    if _last_esp32_image_url:
         return JSONResponse({
             "success": True,
             "has_image": True,
-            "image_base64": _last_esp32_image,
+            "image_url": _last_esp32_image_url,
             "captured_at": _last_esp32_image_time
         })
     else:
         return JSONResponse({
             "success": True,
             "has_image": False,
-            "image_base64": None,
+            "image_url": None,
             "captured_at": None
         })
 
 @app.get("/api/esp32/image.jpg")
 async def esp32_image_jpg():
     """
-    Serve the last ESP32 captured image as a raw JPEG.
-    Can be used as <img src="/api/esp32/image.jpg"> in frontend.
+    Redirect to the Supabase Storage URL for the last ESP32 captured image.
+    Kept for backward compatibility with frontend <img> tags.
     """
-    if _last_esp32_image:
-        image_bytes = base64.b64decode(_last_esp32_image)
-        return Response(content=image_bytes, media_type="image/jpeg",
-                        headers={"Cache-Control": "no-cache, no-store"})
+    if _last_esp32_image_url:
+        return RedirectResponse(url=_last_esp32_image_url, status_code=302)
     else:
         return JSONResponse({"error": "No image captured yet"}, status_code=404)
 
@@ -1067,16 +1081,35 @@ async def esp32_image_jpg():
 
 # ─── Internal helpers for IoT auto-pipeline ───
 
-async def _run_diagnosis_internal(session_id: str, plant_type: str, user: dict) -> dict | None:
+async def _run_diagnosis_internal(session_id: str, plant_type: str, user: dict, image_url: str = None) -> dict | None:
     """
-    Run Gemini diagnosis on the image in the given session.
+    Run Gemini diagnosis on an image.
+    Two sources supported:
+      1. image_url  — Supabase Storage public URL (IoT / ESP32 pipeline)
+      2. session    — in-memory base64 from manual browser upload
     Returns the diagnosis dict or None on failure.
-    Called internally by IoT auto-pipeline — does NOT require a request.
     """
-    if session_id not in sessions or not sessions[session_id].get("image_data"):
-        return None
+    encoded_image = None
 
-    encoded_image = sessions[session_id]["image_data"]
+    # ── Source 1: Fetch from Supabase Storage URL (IoT pipeline) ──
+    if image_url:
+        try:
+            async with httpx.AsyncClient(timeout=20.0) as client:
+                img_resp = await client.get(image_url)
+                if img_resp.status_code == 200:
+                    encoded_image = base64.b64encode(img_resp.content).decode()
+                    logger.info(f"Fetched image from Supabase Storage: {len(img_resp.content)} bytes")
+                else:
+                    logger.error(f"Failed to fetch image from Supabase: HTTP {img_resp.status_code}")
+        except Exception as e:
+            logger.error(f"Error fetching image from Supabase URL: {e}")
+
+    # ── Source 2: In-memory session base64 (manual upload fallback) ──
+    if not encoded_image:
+        if session_id not in sessions or not sessions[session_id].get("image_data"):
+            logger.error(f"No image available for session {session_id}")
+            return None
+        encoded_image = sessions[session_id]["image_data"]
 
     # Get latest soil data
     soil_info = "No soil data available."
@@ -1229,32 +1262,8 @@ def _run_recipe_internal(session_id: str) -> dict | None:
     return recipe
 
 @app.post("/api/upload-image")
-async def upload_image(request: Request):
-    """
-    Smart upload handler:
-    - If Content-Type is image/jpeg (raw bytes from ESP32) → route to ESP32 auto-pipeline
-    - If Content-Type is multipart/form-data (browser upload) → manual upload flow
-    """
-    content_type = request.headers.get("content-type", "")
-
-    # ── ESP32 raw JPEG upload (no auth, no form data) ──
-    if "image/jpeg" in content_type or "image/png" in content_type:
-        logger.info("upload-image: detected raw image from ESP32, routing to auto-pipeline")
-        return await esp32_upload(request)
-
-    # ── Browser manual upload (multipart form with auth) ──
-    try:
-        user = await get_current_user(request)
-    except HTTPException:
-        return JSONResponse({"success": False, "error": "Not authenticated"}, status_code=401)
-
-    form = await request.form()
-    image = form.get("image")
-    session_id = form.get("session_id", "")
-
-    if not image:
-        return JSONResponse({"success": False, "error": "No image provided"}, status_code=400)
-
+async def upload_image(request: Request, image: UploadFile = File(...), session_id: str = Form(...), user: dict = Depends(get_current_user)):
+    """Manual browser image upload for crop disease scanning."""
     contents = await image.read()
     encoded_image = base64.b64encode(contents).decode()
 
@@ -1265,104 +1274,105 @@ async def upload_image(request: Request):
 
     return JSONResponse({"success": True, "message": "Image uploaded successfully"})
 
-# ================= API: ESP32 RAW IMAGE UPLOAD (NO AUTH — IoT DEVICE) =================
+# ================= API: ESP32 IMAGE-READY (SUPABASE STORAGE PIPELINE) =================
 
-@app.post("/api/esp32/upload")
-async def esp32_upload(request: Request):
+@app.post("/api/esp32/image-ready")
+async def esp32_image_ready(payload: ImageReadyRequest):
     """
-    Endpoint for ESP32-CAM to upload raw JPEG images.
-    NO authentication required (ESP32 cannot carry session cookies).
+    Called by ESP32 after it uploads a JPEG to Supabase Storage.
+    NO session auth required (ESP32 cannot carry cookies).
 
-    Flow:
-    1. ESP32 captures image after MQTT trigger
-    2. ESP32 POSTs raw JPEG here
-    3. Backend auto-runs Gemini AI diagnosis
-    4. Result saved to predictions table (linked to farmer who triggered)
-    5. Frontend polling picks up the new prediction
+    New pipeline (replaces old /api/esp32/upload):
+      1. ESP32 captures image after MQTT trigger
+      2. ESP32 uploads JPEG directly to Supabase Storage (bucket: agri-images)
+      3. ESP32 calls THIS endpoint with { image_url, device_id }
+      4. Backend fetches image from Supabase URL → runs Gemini AI diagnosis
+      5. Prediction saved to DB (linked to farmer who triggered)
+      6. Frontend polling picks up the new prediction + image URL
     """
-    global _last_iot_trigger_user, _last_esp32_image, _last_esp32_image_time
+    global _last_iot_trigger_user, _last_esp32_image_url, _last_esp32_image_time
 
-    # Basic device validation via header (optional)
-    device_token = request.headers.get("X-Device-Token", "")
-    expected_token = os.environ.get("ESP32_DEVICE_TOKEN", "agri-sentinel-esp32")
+    image_url = payload.image_url
+    device_id = payload.device_id
 
-    if device_token and device_token != expected_token:
-        logger.warning("ESP32 upload rejected: invalid device token")
-        return JSONResponse({"success": False, "error": "Invalid device token"}, status_code=403)
+    logger.info(f"ESP32 image-ready: device={device_id}, url={image_url}")
 
-    # Read raw JPEG body
-    body = await request.body()
-
-    if not body or len(body) < 500:
-        logger.warning(f"ESP32 upload rejected: image too small ({len(body)} bytes)")
-        return JSONResponse({"success": False, "error": "Image too small or empty"}, status_code=400)
-
-    logger.info(f"ESP32 image received: {len(body)} bytes")
-
-    # Encode to base64
-    encoded_image = base64.b64encode(body).decode()
-
-    # Store globally for frontend preview
-    _last_esp32_image = encoded_image
+    # Store image URL globally so frontend polling can show preview immediately
+    _last_esp32_image_url = image_url
     _last_esp32_image_time = datetime.utcnow().isoformat()
 
-    # Find the user who triggered the analysis
+    # Find the farmer who triggered the analysis
     user_id = _last_iot_trigger_user
     if not user_id:
         for sid, sess in sessions.items():
-            if sess.get("iot_triggered") and not sess.get("image_data"):
+            if sess.get("iot_triggered") and not sess.get("diagnosis"):
                 user_id = sess.get("user_id")
                 break
 
     if not user_id:
-        logger.warning("ESP32 upload: no linked user found, saving as ANONYMOUS")
+        logger.warning("ESP32 image-ready: no linked farmer, saving as ANONYMOUS")
         user_id = "ANONYMOUS"
 
-    # Create IoT session
+    # Create internal session
     session_id = f"esp32_{int(__import__('time').time())}"
     sessions[session_id] = {
-        "image_data": encoded_image,
+        "image_data": None,
+        "image_url": image_url,
         "plant_type": "Auto-detected",
         "diagnosis": None,
         "recipe": None,
         "user_id": user_id,
+        "device_id": device_id,
         "iot_triggered": True,
     }
 
     logger.info(f"ESP32 session created: {session_id}, user={user_id}")
 
-    # Auto-run AI diagnosis
+    # Resolve crop name from farmer profile
+    plant_type = "Crop Plant"
     try:
-        plant_type = "Crop Plant"
-        try:
-            if user_id and user_id != "ANONYMOUS":
-                profile_resp = supabase.table("farmer_profiles").select("crop_name").eq("user_id", user_id).single().execute()
-                if profile_resp.data and profile_resp.data.get("crop_name"):
-                    plant_type = profile_resp.data["crop_name"]
-        except Exception:
-            pass
+        if user_id and user_id != "ANONYMOUS":
+            profile_resp = supabase.table("farmer_profiles") \
+                .select("crop_name").eq("user_id", user_id).single().execute()
+            if profile_resp.data and profile_resp.data.get("crop_name"):
+                plant_type = profile_resp.data["crop_name"]
+    except Exception:
+        pass
 
+    # Run Gemini AI diagnosis (fetches image from Supabase URL)
+    try:
         user_dict = {"id": user_id}
-        diagnosis = await _run_diagnosis_internal(session_id, plant_type, user_dict)
+        diagnosis = await _run_diagnosis_internal(
+            session_id, plant_type, user_dict, image_url=image_url
+        )
 
         if diagnosis:
             sessions[session_id]["diagnosis"] = diagnosis
             _run_recipe_internal(session_id)
-            logger.info(f"ESP32 auto-diagnosis complete: {diagnosis.get('disease_name', 'Unknown')}")
+            logger.info(f"ESP32 diagnosis complete: {diagnosis.get('disease_name')}")
             return JSONResponse({
                 "success": True,
-                "message": "Image received and analyzed",
+                "message": "Image analyzed successfully",
                 "disease": diagnosis.get("disease_name", "Unknown"),
                 "confidence": diagnosis.get("confidence_score", 0),
-                "session_id": session_id
+                "session_id": session_id,
+                "image_url": image_url
             })
         else:
-            logger.error("ESP32 auto-diagnosis returned None")
-            return JSONResponse({"success": True, "message": "Image received but diagnosis failed"}, status_code=200)
+            logger.error("ESP32 diagnosis returned None")
+            return JSONResponse({
+                "success": False,
+                "message": "Image received but AI diagnosis failed",
+                "image_url": image_url
+            }, status_code=500)
 
     except Exception as e:
-        logger.error(f"ESP32 auto-diagnosis error: {e}")
-        return JSONResponse({"success": False, "error": f"Analysis failed: {str(e)}"}, status_code=500)
+        logger.error(f"ESP32 image-ready error: {e}")
+        return JSONResponse({
+            "success": False,
+            "error": f"Analysis failed: {str(e)}",
+            "image_url": image_url
+        }, status_code=500)
 
 # ================= API: PHONE CAMERA PROXY =================
 

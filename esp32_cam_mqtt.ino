@@ -1,16 +1,24 @@
 /*
  * ═══════════════════════════════════════════════════════════
  *  AGRI-SENTINEL — ESP32-CAM with MQTT Trigger
+ *  v3.0 — Supabase Storage Pipeline
  * ═══════════════════════════════════════════════════════════
  *
  *  FLOW:
  *  1. ESP32 connects to WiFi + MQTT broker (HiveMQ Cloud)
  *  2. Subscribes to topic: agri/camera/capture
  *  3. When "START_CAPTURE" message received:
- *     - Captures JPEG image from camera
- *     - POSTs raw JPEG to backend: /api/esp32/upload
- *     - Backend auto-runs AI diagnosis
- *     - Result appears on farmer's dashboard
+ *     a) Captures JPEG image from camera
+ *     b) Uploads JPEG to Supabase Storage (bucket: agri-images)
+ *     c) Calls backend /api/esp32/image-ready with the public URL
+ *     d) Backend fetches image → runs Gemini AI → saves prediction
+ *     e) Result appears on farmer's dashboard
+ *
+ *  WHY SUPABASE STORAGE?
+ *  - Render cold starts cause direct-upload timeouts
+ *  - Supabase Storage is always-on, no cold start
+ *  - Image is available instantly for frontend preview
+ *  - Backend fetches at its own pace for AI analysis
  *
  *  BOARD: AI Thinker ESP32-CAM
  *  REQUIRED LIBRARIES:
@@ -33,14 +41,20 @@
 //  CONFIGURATION — CHANGE THESE VALUES
 // ═══════════════════════════════════════
 
-// WiFi credentials — CHANGE THESE to your WiFi network
+// WiFi credentials
 const char* WIFI_SSID     = "YOUR_WIFI_SSID";
 const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
 
-// Backend URL — Render deployment (HTTPS)
-const char* BACKEND_URL = "https://agri-sentinel12.onrender.com/api/esp32/upload";
+// ── Supabase Storage ──
+// Replace YOUR_PROJECT_REF with your Supabase project reference (e.g. gdihaczrhyzalqnkmghk)
+const char* SUPABASE_URL     = "https://YOUR_PROJECT_REF.supabase.co";
+const char* SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY";
+const char* SUPABASE_BUCKET  = "agri-images";
 
-// MQTT Broker (HiveMQ Cloud) — CHANGE THESE to your MQTT broker credentials
+// ── Backend (Render) — only for the lightweight image-ready notification ──
+const char* BACKEND_URL = "https://agrisentinel.onrender.com/api/esp32/image-ready";
+
+// ── MQTT Broker (HiveMQ Cloud) ──
 const char* MQTT_HOST = "YOUR_MQTT_HOST.s1.eu.hivemq.cloud";
 const int   MQTT_PORT = 8883;  // TLS port
 const char* MQTT_USER = "YOUR_MQTT_USER";
@@ -50,8 +64,8 @@ const char* MQTT_PASS = "YOUR_MQTT_PASSWORD";
 const char* TOPIC_CAPTURE = "agri/camera/capture";   // Subscribe — trigger from backend
 const char* TOPIC_STATUS  = "agri/camera/status";     // Publish — status updates
 
-// Device token for backend validation (must match ESP32_DEVICE_TOKEN env var)
-const char* DEVICE_TOKEN = "agri-sentinel-esp32";
+// Device ID for backend tracking
+const char* DEVICE_ID = "esp32_cam_1";
 
 // ═══════════════════════════════════════
 //  AI THINKER ESP32-CAM PIN DEFINITIONS
@@ -82,11 +96,12 @@ const char* DEVICE_TOKEN = "agri-sentinel-esp32";
 // ═══════════════════════════════════════
 
 WiFiClientSecure espSecureClient;   // For MQTT (TLS)
-WiFiClientSecure espHttpsClient;    // For HTTPS upload to Render
+WiFiClientSecure espHttpsClient;    // For HTTPS uploads (Supabase + Backend)
 PubSubClient     mqttClient(espSecureClient);
 
 bool captureRequested = false;
 unsigned long lastReconnectAttempt = 0;
+unsigned long imageCounter = 0;  // For unique filenames
 
 // ═══════════════════════════════════════
 //  CAMERA INITIALIZATION
@@ -246,31 +261,79 @@ void captureAndUpload() {
 
   Serial.printf("✅ Image captured: %d bytes (%dx%d)\n", fb->len, fb->width, fb->height);
 
-  // Upload to backend (HTTPS — Render)
-  mqttClient.publish(TOPIC_STATUS, "UPLOADING");
-  Serial.printf("📤 Uploading to: %s\n", BACKEND_URL);
+  // ── STEP 1: Upload to Supabase Storage ──
+  mqttClient.publish(TOPIC_STATUS, "UPLOADING_TO_STORAGE");
 
-  espHttpsClient.setInsecure();  // Skip cert verification for Render HTTPS
+  // Generate unique filename: leaf_<millis>_<counter>.jpg
+  imageCounter++;
+  String filename = "leaf_" + String(millis()) + "_" + String(imageCounter) + ".jpg";
+
+  // Build Supabase Storage upload URL
+  // POST https://<project>.supabase.co/storage/v1/object/<bucket>/<filename>
+  String uploadUrl = String(SUPABASE_URL) + "/storage/v1/object/" + String(SUPABASE_BUCKET) + "/" + filename;
+
+  Serial.printf("📤 Uploading to Supabase Storage: %s\n", filename.c_str());
+
+  espHttpsClient.setInsecure();  // Skip cert verification
   HTTPClient http;
-  http.begin(espHttpsClient, BACKEND_URL);
+  http.begin(espHttpsClient, uploadUrl);
   http.addHeader("Content-Type", "image/jpeg");
-  http.addHeader("X-Device-Token", DEVICE_TOKEN);
-  http.setTimeout(30000);  // 30 second timeout (AI analysis takes time)
+  http.addHeader("Authorization", String("Bearer ") + String(SUPABASE_ANON_KEY));
+  http.addHeader("x-upsert", "true");  // Overwrite if exists
+  http.setTimeout(15000);  // 15 second timeout
 
-  int responseCode = http.POST(fb->buf, fb->len);
+  int uploadCode = http.POST(fb->buf, fb->len);
 
-  if (responseCode > 0) {
-    String response = http.getString();
-    Serial.printf("✅ Upload success! HTTP %d\n", responseCode);
+  if (uploadCode < 200 || uploadCode >= 300) {
+    Serial.printf("❌ Supabase upload failed! HTTP %d\n", uploadCode);
+    String errBody = http.getString();
+    Serial.printf("📋 Error: %s\n", errBody.c_str());
+    mqttClient.publish(TOPIC_STATUS, "STORAGE_UPLOAD_FAILED");
+    http.end();
+    esp_camera_fb_return(fb);
+    Serial.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    return;
+  }
+
+  Serial.printf("✅ Supabase upload success! HTTP %d\n", uploadCode);
+  http.end();
+
+  // Done with the camera frame buffer
+  esp_camera_fb_return(fb);
+
+  // ── STEP 2: Build public URL for the uploaded image ──
+  // Public URL format: https://<project>.supabase.co/storage/v1/object/public/<bucket>/<filename>
+  String publicUrl = String(SUPABASE_URL) + "/storage/v1/object/public/" + String(SUPABASE_BUCKET) + "/" + filename;
+
+  Serial.printf("🔗 Public URL: %s\n", publicUrl.c_str());
+  mqttClient.publish(TOPIC_STATUS, "NOTIFYING_BACKEND");
+
+  // ── STEP 3: Notify backend with the image URL ──
+  Serial.printf("📡 Notifying backend: %s\n", BACKEND_URL);
+
+  HTTPClient http2;
+  http2.begin(espHttpsClient, BACKEND_URL);
+  http2.addHeader("Content-Type", "application/json");
+  http2.setTimeout(60000);  // 60 second timeout (Gemini AI analysis takes time)
+
+  // JSON payload
+  String jsonPayload = "{\"image_url\":\"" + publicUrl + "\",\"device_id\":\"" + String(DEVICE_ID) + "\"}";
+  Serial.printf("📋 Payload: %s\n", jsonPayload.c_str());
+
+  int notifyCode = http2.POST(jsonPayload);
+
+  if (notifyCode > 0) {
+    String response = http2.getString();
+    Serial.printf("✅ Backend notified! HTTP %d\n", notifyCode);
     Serial.printf("📋 Response: %s\n", response.c_str());
     mqttClient.publish(TOPIC_STATUS, "ANALYSIS_COMPLETE");
   } else {
-    Serial.printf("❌ Upload failed! Error: %d\n", responseCode);
-    mqttClient.publish(TOPIC_STATUS, "UPLOAD_FAILED");
+    Serial.printf("❌ Backend notification failed! Error: %d\n", notifyCode);
+    mqttClient.publish(TOPIC_STATUS, "BACKEND_NOTIFY_FAILED");
+    // Image is still safely in Supabase Storage — backend can retry later
   }
 
-  http.end();
-  esp_camera_fb_return(fb);
+  http2.end();
 
   Serial.println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 }
@@ -284,7 +347,8 @@ void setup() {
   delay(2000);
 
   Serial.println("═══════════════════════════════════════");
-  Serial.println("  🌱 AGRI-SENTINEL ESP32-CAM v2.0");
+  Serial.println("  🌱 AGRI-SENTINEL ESP32-CAM v3.0");
+  Serial.println("  📦 Pipeline: Supabase Storage");
   Serial.println("═══════════════════════════════════════");
 
   // Setup flash LED
