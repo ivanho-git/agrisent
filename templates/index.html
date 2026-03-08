@@ -2549,31 +2549,61 @@
                             </div>
                         </div>
 
-                        <!-- Treatment Containers -->
+                        <!-- Treatment Recipe (Gemini AI Generated) -->
                         <div style="margin-bottom:16px;">
-                            <p style="font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.5px; margin-bottom:10px;">🧪 Treatment Recipe</p>
+                            <p style="font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.5px; margin-bottom:10px;">🧪 AI Treatment Recipe</p>
                             <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
                                 <div style="background:#fff; padding:12px 8px; text-align:center; border-radius:var(--r); border:1.5px solid #d1fae5;">
-                                    <div style="font-size:9px; font-weight:700; color:#94a3b8; letter-spacing:.5px;">CONTAINER A</div>
+                                    <div style="font-size:8px; font-weight:700; color:#047857; letter-spacing:.3px; margin-bottom:2px;">CONTAINER A</div>
+                                    <div style="font-size:9px; font-weight:600; color:#94a3b8; letter-spacing:.3px;">Copper Fungicide</div>
                                     <div id="iotResultA" style="font-size:18px; font-weight:800; color:#047857; margin-top:4px;">—</div>
+                                    <div style="font-size:9px; color:#94a3b8; margin-top:2px;">/ 250 ml</div>
                                 </div>
                                 <div style="background:#fff; padding:12px 8px; text-align:center; border-radius:var(--r); border:1.5px solid #fef3c7;">
-                                    <div style="font-size:9px; font-weight:700; color:#94a3b8; letter-spacing:.5px;">CONTAINER B</div>
+                                    <div style="font-size:8px; font-weight:700; color:#d97706; letter-spacing:.3px; margin-bottom:2px;">CONTAINER B</div>
+                                    <div style="font-size:9px; font-weight:600; color:#94a3b8; letter-spacing:.3px;">Potassium Bicarb</div>
                                     <div id="iotResultB" style="font-size:18px; font-weight:800; color:#d97706; margin-top:4px;">—</div>
+                                    <div style="font-size:9px; color:#94a3b8; margin-top:2px;">/ 250 ml</div>
                                 </div>
                                 <div style="background:#fff; padding:12px 8px; text-align:center; border-radius:var(--r); border:1.5px solid #e0f2fe;">
-                                    <div style="font-size:9px; font-weight:700; color:#94a3b8; letter-spacing:.5px;">CONTAINER C</div>
+                                    <div style="font-size:8px; font-weight:700; color:#0369a1; letter-spacing:.3px; margin-bottom:2px;">CONTAINER C</div>
+                                    <div style="font-size:9px; font-weight:600; color:#94a3b8; letter-spacing:.3px;">Azadirachtin</div>
                                     <div id="iotResultC" style="font-size:18px; font-weight:800; color:#0369a1; margin-top:4px;">—</div>
+                                    <div style="font-size:9px; color:#94a3b8; margin-top:2px;">/ 250 ml</div>
+                                </div>
+                            </div>
+                            <!-- Water amount -->
+                            <div style="background:#fff; padding:10px 14px; border-radius:var(--r); border:1.5px solid #e0f2fe; margin-top:8px; display:flex; align-items:center; gap:10px;">
+                                <span style="font-size:22px;">💧</span>
+                                <div style="flex:1;">
+                                    <div style="font-size:9px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px;">WATER</div>
+                                    <div id="iotResultWater" style="font-size:15px; font-weight:800; color:#0369a1;">— ml</div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- Mix Time -->
-                        <div style="background:#fff; padding:14px 16px; border-radius:var(--r); border:1.5px solid var(--border-light); margin-bottom:20px; display:flex; align-items:center; gap:12px;">
+                        <div style="background:#fff; padding:14px 16px; border-radius:var(--r); border:1.5px solid var(--border-light); margin-bottom:12px; display:flex; align-items:center; gap:12px;">
                             <span style="font-size:28px;">⏱️</span>
                             <div>
                                 <div style="font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.5px;">MIX TIME</div>
                                 <div id="iotResultMixTime" style="font-size:16px; font-weight:800; color:#064e3b;">— seconds</div>
+                            </div>
+                        </div>
+
+                        <!-- Instructions (from Gemini) -->
+                        <div id="iotRecipeInstructionsWrap" style="display:none; margin-bottom:12px;">
+                            <div style="background:#fff; padding:14px 16px; border-radius:var(--r); border:1.5px solid #d1fae5;">
+                                <div style="font-size:10px; font-weight:700; color:#047857; text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px;">📋 MIXING INSTRUCTIONS</div>
+                                <div id="iotRecipeInstructions" style="font-size:13px; color:#334155; line-height:1.7; white-space:pre-line;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Safety Notes (from Gemini) -->
+                        <div id="iotRecipeSafetyWrap" style="display:none; margin-bottom:20px;">
+                            <div style="background:#fef2f2; padding:14px 16px; border-radius:var(--r); border:1.5px solid #fecaca;">
+                                <div style="font-size:10px; font-weight:700; color:#dc2626; text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px;">⚠️ SAFETY WARNINGS</div>
+                                <div id="iotRecipeSafety" style="font-size:13px; color:#991b1b; line-height:1.7; white-space:pre-line;"></div>
                             </div>
                         </div>
 
@@ -4665,7 +4695,7 @@
                         iotLastPredictionId = data.prediction.id || null;
                         stopIoTPoll();
                         stopIoTImagePoll();
-                        displayIoTResult(data.prediction);
+                        displayIoTResult(data.prediction, data.recipe || null);
                     }
                 } catch (e) {
                     // Transient error — keep polling silently
@@ -4755,7 +4785,7 @@
         /**
          * Display the IoT analysis result
          */
-        function displayIoTResult(prediction) {
+        function displayIoTResult(prediction, recipe) {
             // Switch state
             setIoTState('iotResultState');
 
@@ -4765,14 +4795,37 @@
             const conf = prediction.confidence || 0;
             document.getElementById('iotResultConfidence').textContent = Math.round(conf * 100) + '%';
 
-            document.getElementById('iotResultA').textContent = (prediction.container_a_ml || 0) + ' ml';
-            document.getElementById('iotResultB').textContent = (prediction.container_b_ml || 0) + ' ml';
-            document.getElementById('iotResultC').textContent = (prediction.container_c_ml || 0) + ' ml';
+            // ── Recipe data — prefer recipe table data, fallback to prediction columns ──
+            const rA = recipe ? (recipe.container_a_ml || 0) : (prediction.container_a_ml || 0);
+            const rB = recipe ? (recipe.container_b_ml || 0) : (prediction.container_b_ml || 0);
+            const rC = recipe ? (recipe.container_c_ml || 0) : (prediction.container_c_ml || 0);
+            const rWater = recipe ? (recipe.water_ml || 0) : 0;
+            const mixSeconds = recipe ? (recipe.mix_time_seconds || 0) : (prediction.mix_time_seconds || 0);
 
-            const mixSeconds = prediction.mix_time_seconds || 0;
+            document.getElementById('iotResultA').textContent = rA + ' ml';
+            document.getElementById('iotResultB').textContent = rB + ' ml';
+            document.getElementById('iotResultC').textContent = rC + ' ml';
+            document.getElementById('iotResultWater').textContent = rWater + ' ml';
+
             document.getElementById('iotResultMixTime').textContent = mixSeconds > 60
                 ? Math.round(mixSeconds / 60) + ' minutes'
                 : mixSeconds + ' seconds';
+
+            // ── Instructions from Gemini ──
+            const instrWrap = document.getElementById('iotRecipeInstructionsWrap');
+            const instrEl = document.getElementById('iotRecipeInstructions');
+            if (recipe && recipe.instructions && instrWrap && instrEl) {
+                instrEl.textContent = recipe.instructions;
+                instrWrap.style.display = 'block';
+            }
+
+            // ── Safety notes from Gemini ──
+            const safetyWrap = document.getElementById('iotRecipeSafetyWrap');
+            const safetyEl = document.getElementById('iotRecipeSafety');
+            if (recipe && recipe.safety_notes && safetyWrap && safetyEl) {
+                safetyEl.textContent = recipe.safety_notes;
+                safetyWrap.style.display = 'block';
+            }
 
             // Timestamp
             const ts = prediction.created_at ? new Date(prediction.created_at).toLocaleString() : new Date().toLocaleString();
@@ -4906,6 +4959,10 @@
             document.getElementById('iotResultImageWrap').style.display = 'none';
             const soilWrap = document.getElementById('iotSoilResultWrap');
             if (soilWrap) soilWrap.style.display = 'none';
+            const instrWrap = document.getElementById('iotRecipeInstructionsWrap');
+            if (instrWrap) instrWrap.style.display = 'none';
+            const safetyWrap = document.getElementById('iotRecipeSafetyWrap');
+            if (safetyWrap) safetyWrap.style.display = 'none';
 
             // Clear preview image src to avoid stale images on next scan
             const previewImg = document.getElementById('iotPreviewImg');

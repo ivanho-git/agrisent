@@ -98,3 +98,34 @@ ALTER TABLE soil_logs ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT no
 CREATE INDEX IF NOT EXISTS idx_soil_logs_device_id ON soil_logs(device_id);
 CREATE INDEX IF NOT EXISTS idx_soil_logs_created_at ON soil_logs(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_soil_logs_user_id ON soil_logs(user_id);
+
+-- =====================================================
+-- 6. RECIPES TABLE — Gemini-generated treatment recipes
+--    Stores mix ratios for 3 chemical containers based on
+--    disease prediction + soil sensor data (pH, moisture)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS recipes (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    farmer_id TEXT,
+    prediction_id UUID,
+    disease_name TEXT NOT NULL,
+    crop_name TEXT,
+    soil_ph DOUBLE PRECISION,
+    soil_moisture DOUBLE PRECISION,
+    container_a_name TEXT DEFAULT 'Copper Fungicide',
+    container_a_ml DOUBLE PRECISION DEFAULT 0,
+    container_b_name TEXT DEFAULT 'Potassium Bicarbonate',
+    container_b_ml DOUBLE PRECISION DEFAULT 0,
+    container_c_name TEXT DEFAULT 'Azadirachtin',
+    container_c_ml DOUBLE PRECISION DEFAULT 0,
+    water_ml DOUBLE PRECISION DEFAULT 0,
+    mix_time_seconds INTEGER DEFAULT 300,
+    instructions TEXT,
+    safety_notes TEXT,
+    gemini_raw JSONB,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_recipes_farmer_id ON recipes(farmer_id);
+CREATE INDEX IF NOT EXISTS idx_recipes_created_at ON recipes(created_at DESC);
+

@@ -1059,10 +1059,26 @@ async def latest_prediction(request: Request, after: str = None):
 
         if result.data and len(result.data) > 0:
             pred = result.data[0]
+
+            # Also fetch the latest recipe for this user
+            recipe_data = None
+            try:
+                recipe_resp = supabase.table("recipes") \
+                    .select("*") \
+                    .eq("farmer_id", str(user_id)) \
+                    .order("created_at", desc=True) \
+                    .limit(1) \
+                    .execute()
+                if recipe_resp.data and len(recipe_resp.data) > 0:
+                    recipe_data = recipe_resp.data[0]
+            except Exception as re:
+                logger.warning(f"Recipe fetch error: {re}")
+
             return JSONResponse({
                 "success": True,
                 "has_new": True,
                 "prediction": pred,
+                "recipe": recipe_data,
                 "has_image": _last_esp32_image_url is not None,
                 "image_url": _last_esp32_image_url,
                 "image_captured_at": _last_esp32_image_time
@@ -1320,44 +1336,179 @@ async def _run_diagnosis_internal(session_id: str, plant_type: str, user: dict, 
         return None
 
 
-def _run_recipe_internal(session_id: str) -> dict | None:
+def _run_recipe_internal(session_id: str, soil_data: dict = None) -> dict | None:
     """
-    Generate treatment recipe for the given session's diagnosis.
+    Send disease diagnosis + soil sensor data to Gemini AI to generate
+    a real treatment recipe using the 3 physical containers:
+      A = Copper Fungicide (250 ml max)
+      B = Potassium Bicarbonate liquid (250 ml max)
+      C = Azadirachtin liquid (250 ml max)
+    Saves the recipe to the Supabase `recipes` table.
     Returns recipe dict or None.
     """
     if session_id not in sessions or not sessions[session_id].get("diagnosis"):
         return None
 
     diagnosis = sessions[session_id]["diagnosis"]
+    user_id = sessions[session_id].get("user_id")
+    disease_name = diagnosis.get("disease_name", "Unknown")
+    plant_type = diagnosis.get("plant_identified", "Crop Plant")
+    severity = diagnosis.get("severity", "moderate")
 
-    recipe = {
-        "recipe_name": f"Treatment for {diagnosis.get('disease_name', 'Unknown Disease')}",
-        "recipe": [
-            {"chemical": "COPPER FUNGICIDE", "amount_ml": diagnosis.get("container_a_ml", 250)},
-            {"chemical": "MANCOZEB", "amount_ml": diagnosis.get("container_b_ml", 150)},
-            {"chemical": "SURFACTANT", "amount_ml": diagnosis.get("container_c_ml", 50)},
-            {"chemical": "WATER", "amount_ml": 10000}
-        ],
-        "mixing_steps": [
-            "Fill spray tank with 5 liters of clean water",
-            "Add copper fungicide and mix thoroughly for 30 seconds",
-            "Slowly add mancozeb powder while stirring continuously",
-            "Add surfactant for better leaf adhesion",
-            "Top up with remaining 5 liters of water",
-            f"Stir mixture for {diagnosis.get('mix_time_seconds', 300) // 60} minutes before use"
-        ],
-        "safety_warnings": [
-            "PPE REQUIRED: Wear gloves, mask, and protective eyewear",
-            "WEATHER: Do not spray if rain expected within 4 hours",
-            "TEMPERATURE: Apply when temperature is below 30°C",
-            "WIND: Avoid spraying in windy conditions (>15 km/h)",
-            f"HARVEST: Wait {diagnosis.get('harvest_wait_days', 14)} days before harvesting treated plants"
-        ],
-        "total_mix_time_seconds": diagnosis.get("mix_time_seconds", 300)
-    }
+    # Build soil context
+    soil_context = "No soil sensor data available."
+    soil_ph = None
+    soil_moisture = None
+    if soil_data and soil_data.get("ph"):
+        soil_ph = float(soil_data["ph"])
+        soil_moisture = float(soil_data.get("moisture", 0))
+        soil_context = f"""
+        Live Soil Sensor Readings (from ESP32-S2):
+        - Soil pH: {soil_ph}
+        - Soil Moisture: {soil_moisture}%
+        """
+    elif _last_soil_data:
+        soil_ph = float(_last_soil_data.get("ph", 0))
+        soil_moisture = float(_last_soil_data.get("moisture", 0))
+        soil_context = f"""
+        Live Soil Sensor Readings (from ESP32-S2):
+        - Soil pH: {soil_ph}
+        - Soil Moisture: {soil_moisture}%
+        """
 
-    sessions[session_id]["recipe"] = recipe
-    return recipe
+    recipe_prompt = f"""
+    You are AGRIVISION, an expert agricultural chemist. Based on the disease diagnosis and soil conditions below,
+    generate a precise pesticide mixing recipe using ONLY these 3 available chemical containers:
+
+    AVAILABLE CONTAINERS (each is 250 ml max):
+      Container A: COPPER FUNGICIDE (liquid) — 250 ml bottle
+      Container B: POTASSIUM BICARBONATE (liquid solution) — 250 ml bottle
+      Container C: AZADIRACHTIN (neem-based liquid) — 250 ml bottle
+
+    DISEASE DIAGNOSIS:
+    - Disease: {disease_name}
+    - Crop: {plant_type}
+    - Severity: {severity}
+
+    {soil_context}
+
+    RULES:
+    1. Each container amount MUST be between 0 and 250 ml (integer values only)
+    2. The mix should be effective for the specific disease detected
+    3. Consider soil pH when deciding amounts — acidic soil may need less copper fungicide
+    4. Consider soil moisture — high moisture may need adjusted concentrations
+    5. If the disease is "Healthy" or "No disease", set all containers to 0
+    6. Water amount should be practical for spraying (500-10000 ml)
+    7. Provide clear step-by-step mixing instructions
+    8. Include safety warnings specific to the chemicals used
+
+    Return STRICT JSON only (no markdown, no extra text):
+    {{
+        "container_a_ml": 50,
+        "container_b_ml": 30,
+        "container_c_ml": 20,
+        "water_ml": 5000,
+        "mix_time_seconds": 180,
+        "instructions": "Step-by-step mixing instructions as a single string with numbered steps",
+        "safety_notes": "Safety warnings as a single string",
+        "reasoning": "Brief explanation of why these amounts were chosen based on the disease and soil conditions"
+    }}
+    """
+
+    try:
+        response = model.generate_content(recipe_prompt)
+        cleaned = response.text.strip()
+        if cleaned.startswith("```json"):
+            cleaned = cleaned[7:]
+        if cleaned.startswith("```"):
+            cleaned = cleaned[3:]
+        if cleaned.endswith("```"):
+            cleaned = cleaned[:-3]
+        cleaned = cleaned.strip()
+
+        recipe_result = json.loads(cleaned)
+
+        # Clamp values to 0-250 range
+        container_a = max(0, min(250, int(recipe_result.get("container_a_ml", 0))))
+        container_b = max(0, min(250, int(recipe_result.get("container_b_ml", 0))))
+        container_c = max(0, min(250, int(recipe_result.get("container_c_ml", 0))))
+        water_ml = max(0, int(recipe_result.get("water_ml", 5000)))
+        mix_time = max(30, int(recipe_result.get("mix_time_seconds", 180)))
+
+        recipe = {
+            "recipe_name": f"Treatment for {disease_name}",
+            "disease_name": disease_name,
+            "crop_name": plant_type,
+            "soil_ph": soil_ph,
+            "soil_moisture": soil_moisture,
+            "containers": [
+                {"name": "COPPER FUNGICIDE", "label": "Container A", "amount_ml": container_a, "max_ml": 250},
+                {"name": "POTASSIUM BICARBONATE", "label": "Container B", "amount_ml": container_b, "max_ml": 250},
+                {"name": "AZADIRACHTIN", "label": "Container C", "amount_ml": container_c, "max_ml": 250},
+            ],
+            "container_a_ml": container_a,
+            "container_b_ml": container_b,
+            "container_c_ml": container_c,
+            "water_ml": water_ml,
+            "mix_time_seconds": mix_time,
+            "instructions": recipe_result.get("instructions", ""),
+            "safety_notes": recipe_result.get("safety_notes", ""),
+            "reasoning": recipe_result.get("reasoning", ""),
+            "total_mix_time_seconds": mix_time,
+        }
+
+        sessions[session_id]["recipe"] = recipe
+
+        # Save to Supabase recipes table
+        try:
+            supabase.table("recipes").insert({
+                "farmer_id": str(user_id) if user_id else "ANONYMOUS",
+                "disease_name": disease_name,
+                "crop_name": plant_type,
+                "soil_ph": soil_ph,
+                "soil_moisture": soil_moisture,
+                "container_a_name": "Copper Fungicide",
+                "container_a_ml": container_a,
+                "container_b_name": "Potassium Bicarbonate",
+                "container_b_ml": container_b,
+                "container_c_name": "Azadirachtin",
+                "container_c_ml": container_c,
+                "water_ml": water_ml,
+                "mix_time_seconds": mix_time,
+                "instructions": recipe_result.get("instructions", ""),
+                "safety_notes": recipe_result.get("safety_notes", ""),
+                "gemini_raw": recipe_result,
+            }).execute()
+            logger.info(f"Recipe saved: A={container_a}ml, B={container_b}ml, C={container_c}ml for {disease_name}")
+        except Exception as db_err:
+            logger.error(f"Recipe DB save error: {db_err}")
+
+        return recipe
+
+    except Exception as e:
+        logger.error(f"Gemini recipe generation error: {e}")
+        # Fallback: return a basic recipe so the pipeline doesn't break
+        fallback = {
+            "recipe_name": f"Treatment for {disease_name}",
+            "disease_name": disease_name,
+            "crop_name": plant_type,
+            "containers": [
+                {"name": "COPPER FUNGICIDE", "label": "Container A", "amount_ml": 0, "max_ml": 250},
+                {"name": "POTASSIUM BICARBONATE", "label": "Container B", "amount_ml": 0, "max_ml": 250},
+                {"name": "AZADIRACHTIN", "label": "Container C", "amount_ml": 0, "max_ml": 250},
+            ],
+            "container_a_ml": 0,
+            "container_b_ml": 0,
+            "container_c_ml": 0,
+            "water_ml": 0,
+            "mix_time_seconds": 0,
+            "instructions": "Recipe generation failed. Please try again.",
+            "safety_notes": "",
+            "reasoning": f"Error: {str(e)}",
+            "total_mix_time_seconds": 0,
+        }
+        sessions[session_id]["recipe"] = fallback
+        return fallback
 
 @app.post("/api/upload-image")
 async def upload_image(request: Request, image: UploadFile = File(...), session_id: str = Form(...), user: dict = Depends(get_current_user)):
@@ -1446,7 +1597,7 @@ async def esp32_image_ready(payload: ImageReadyRequest):
 
         if diagnosis:
             sessions[session_id]["diagnosis"] = diagnosis
-            _run_recipe_internal(session_id)
+            _run_recipe_internal(session_id, soil_data=_last_soil_data)
             logger.info(f"ESP32 diagnosis complete: {diagnosis.get('disease_name')}")
             return JSONResponse({
                 "success": True,
@@ -1742,37 +1893,26 @@ async def generate_recipe(request: Request, user: dict = Depends(get_current_use
     if session_id not in sessions or not sessions[session_id].get("diagnosis"):
         return JSONResponse({"success": False, "error": "No diagnosis found. Please run diagnosis first."})
 
-    diagnosis = sessions[session_id]["diagnosis"]
+    # Fetch latest soil data for the recipe
+    soil_data = _last_soil_data
+    if not soil_data:
+        try:
+            soil_resp = supabase.table("soil_logs") \
+                .select("ph, moisture") \
+                .order("created_at", desc=True) \
+                .limit(1) \
+                .execute()
+            if soil_resp.data:
+                soil_data = soil_resp.data[0]
+        except Exception:
+            pass
 
-    recipe = {
-        "recipe_name": f"Treatment for {diagnosis.get('disease_name', 'Unknown Disease')}",
-        "recipe": [
-            {"chemical": "COPPER FUNGICIDE", "amount_ml": diagnosis.get("container_a_ml", 250)},
-            {"chemical": "MANCOZEB", "amount_ml": diagnosis.get("container_b_ml", 150)},
-            {"chemical": "SURFACTANT", "amount_ml": diagnosis.get("container_c_ml", 50)},
-            {"chemical": "WATER", "amount_ml": 10000}
-        ],
-        "mixing_steps": [
-            "Fill spray tank with 5 liters of clean water",
-            "Add copper fungicide and mix thoroughly for 30 seconds",
-            "Slowly add mancozeb powder while stirring continuously",
-            "Add surfactant for better leaf adhesion",
-            "Top up with remaining 5 liters of water",
-            f"Stir mixture for {diagnosis.get('mix_time_seconds', 300) // 60} minutes before use"
-        ],
-        "safety_warnings": [
-            "PPE REQUIRED: Wear gloves, mask, and protective eyewear",
-            "WEATHER: Do not spray if rain expected within 4 hours",
-            "TEMPERATURE: Apply when temperature is below 30°C",
-            "WIND: Avoid spraying in windy conditions (>15 km/h)",
-            f"HARVEST: Wait {diagnosis.get('harvest_wait_days', 14)} days before harvesting treated plants"
-        ],
-        "total_mix_time_seconds": diagnosis.get("mix_time_seconds", 300)
-    }
+    recipe = _run_recipe_internal(session_id, soil_data=soil_data)
 
-    sessions[session_id]["recipe"] = recipe
-
-    return JSONResponse({"success": True, "recipe": recipe})
+    if recipe:
+        return JSONResponse({"success": True, "recipe": recipe})
+    else:
+        return JSONResponse({"success": False, "error": "Failed to generate recipe"})
 
 # ================= API: STORE SOIL DATA (AJAX) =================
 
