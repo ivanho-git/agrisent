@@ -2401,7 +2401,7 @@
             <!-- ═══════════════════════════════════════════════ -->
             <div id="iotSection" style="margin-bottom:24px;">
 
-                <!-- ── IDLE STATE: Big central button ── -->
+                <!-- ── IDLE STATE: Crop selection + big central button ── -->
                 <div id="iotIdleState">
                     <div style="text-align:center; padding:36px 20px; background:linear-gradient(160deg, #ecfdf5 0%, #fffde7 50%, #e0f2fe 100%); border:2.5px solid var(--green-400); border-radius:var(--r-xl); position:relative; overflow:hidden;">
                         <!-- Decorative corner grain -->
@@ -2410,13 +2410,40 @@
 
                         <div style="font-size:56px; margin-bottom:14px; animation: float 3s ease-in-out infinite;">🌾</div>
                         <h3 style="font-size:20px; font-weight:900; color:#064e3b; margin-bottom:6px; letter-spacing:-.3px;">AUTOMATED CROP SCAN</h3>
-                        <p style="font-size:13px; color:#64748b; margin-bottom:24px; max-width:340px; margin-left:auto; margin-right:auto; line-height:1.6;">
-                            ESP32-CAM captures your crop leaf, AI detects disease &amp; generates treatment — all in one click.
+                        <p style="font-size:13px; color:#64748b; margin-bottom:20px; max-width:360px; margin-left:auto; margin-right:auto; line-height:1.6;">
+                            ESP32-CAM captures your crop leaf &amp; ESP32-S2 reads soil sensors — AI detects disease using both.
                         </p>
+
+                        <!-- ── Crop Type Selector ── -->
+                        <div style="max-width:320px; margin:0 auto 20px; text-align:left;">
+                            <label style="font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; display:block;">🌱 Select Your Crop Type</label>
+                            <select id="iotCropSelect" style="width:100%; padding:12px 16px; border:2px solid #d1fae5; border-radius:var(--r); font-size:15px; font-weight:600; font-family:inherit; color:#064e3b; background:#fff; cursor:pointer; outline:none; transition:.2s;" onfocus="this.style.borderColor='#10b981'" onblur="this.style.borderColor='#d1fae5'">
+                                <option value="">— Choose crop —</option>
+                                <option value="Wheat">🌾 Wheat</option>
+                                <option value="Rice">🍚 Rice</option>
+                                <option value="Maize">🌽 Maize</option>
+                                <option value="Cotton">🧵 Cotton</option>
+                                <option value="Sugarcane">🎋 Sugarcane</option>
+                                <option value="Tomato">🍅 Tomato</option>
+                                <option value="Potato">🥔 Potato</option>
+                                <option value="Soybean">🫘 Soybean</option>
+                                <option value="Groundnut">🥜 Groundnut</option>
+                                <option value="Mustard">🌻 Mustard</option>
+                                <option value="Chilli">🌶️ Chilli</option>
+                                <option value="Onion">🧅 Onion</option>
+                                <option value="Brinjal">🍆 Brinjal</option>
+                                <option value="Grape">🍇 Grape</option>
+                                <option value="Mango">🥭 Mango</option>
+                                <option value="Banana">🍌 Banana</option>
+                                <option value="Tea">🍵 Tea</option>
+                                <option value="Coffee">☕ Coffee</option>
+                            </select>
+                        </div>
+
                         <button class="action-btn" id="iotAnalyzeBtn" onclick="startIoTAnalysis()" style="max-width:340px; margin:0 auto; font-size:17px; padding:18px 36px; border-radius:var(--r-lg); box-shadow:0 8px 28px rgba(5,150,105,.25);">
-                            🌾 Initialize Analysis
+                            🌾 Initialize System
                         </button>
-                        <p style="font-size:11px; color:#94a3b8; margin-top:14px;">Fully automated • No upload needed</p>
+                        <p style="font-size:11px; color:#94a3b8; margin-top:14px;">Camera + Soil Sensors • Fully automated</p>
                     </div>
                 </div>
 
@@ -2437,9 +2464,9 @@
                                     <div id="iotProgressBar" style="width:0%; height:100%; background:linear-gradient(90deg, var(--green-700), var(--green-400)); transition: width .6s ease; border-radius:6px;"></div>
                                 </div>
                                 <div style="display:flex; justify-content:space-between; margin-top:6px;">
+                                    <span style="font-size:10px; color:#94a3b8; font-weight:600;">SENSORS</span>
                                     <span style="font-size:10px; color:#94a3b8; font-weight:600;">CAPTURE</span>
                                     <span style="font-size:10px; color:#94a3b8; font-weight:600;">ANALYZE</span>
-                                    <span style="font-size:10px; color:#94a3b8; font-weight:600;">TREAT</span>
                                 </div>
                             </div>
 
@@ -2498,6 +2525,27 @@
                             <div style="background:#fff; padding:16px; border-left:4px solid var(--sun-500); border-radius:0 var(--r-lg) var(--r-lg) 0; box-shadow:var(--shadow-sm);">
                                 <div style="font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.8px; margin-bottom:6px;">📊 CONFIDENCE</div>
                                 <div id="iotResultConfidence" style="font-size:16px; font-weight:800; color:#d97706;">—</div>
+                            </div>
+                        </div>
+
+                        <!-- Soil Sensor Data (from ESP32-S2) -->
+                        <div id="iotSoilResultWrap" style="display:none; margin-bottom:16px; animation: fadeInUp .5s ease;">
+                            <p style="font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.5px; margin-bottom:10px;">🌱 Soil Sensor Readings (ESP32-S2)</p>
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                                <div style="background:linear-gradient(135deg, #fefce8, #fff); padding:16px; text-align:center; border-radius:var(--r); border:1.5px solid #fef08a; position:relative; overflow:hidden;">
+                                    <div style="position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg, #eab308, #facc15);"></div>
+                                    <div style="font-size:24px; margin-bottom:4px;">⚗️</div>
+                                    <div style="font-size:9px; font-weight:700; color:#94a3b8; letter-spacing:.5px; text-transform:uppercase;">Soil pH</div>
+                                    <div id="iotResultPH" style="font-size:22px; font-weight:800; color:#854d0e; margin-top:4px;">—</div>
+                                    <div id="iotResultPHLabel" style="font-size:10px; color:#a16207; margin-top:2px;">Waiting...</div>
+                                </div>
+                                <div style="background:linear-gradient(135deg, #ecfdf5, #fff); padding:16px; text-align:center; border-radius:var(--r); border:1.5px solid #a7f3d0; position:relative; overflow:hidden;">
+                                    <div style="position:absolute; top:0; left:0; right:0; height:3px; background:linear-gradient(90deg, #059669, #34d399);"></div>
+                                    <div style="font-size:24px; margin-bottom:4px;">💧</div>
+                                    <div style="font-size:9px; font-weight:700; color:#94a3b8; letter-spacing:.5px; text-transform:uppercase;">Soil Moisture</div>
+                                    <div id="iotResultMoisture" style="font-size:22px; font-weight:800; color:#047857; margin-top:4px;">—</div>
+                                    <div id="iotResultMoistureLabel" style="font-size:10px; color:#059669; margin-top:2px;">Waiting...</div>
+                                </div>
                             </div>
                         </div>
 
@@ -4434,10 +4482,11 @@
 
         // ── IoT status messages cycling ──
         const iotStages = [
-            { icon: '📡', status: '📡 Triggering camera...', sub: 'Sending MQTT signal to ESP32-CAM', progress: 10, step: 1 },
-            { icon: '📷', status: '📷 Capturing image...', sub: 'ESP32-CAM is photographing your crop leaf', progress: 30, step: 2 },
-            { icon: '📤', status: '📤 Uploading image...', sub: 'Sending captured image to the server', progress: 50, step: 2 },
-            { icon: '🧠', status: '🧠 Running AI diagnosis...', sub: 'Gemini AI is analyzing the leaf for disease', progress: 70, step: 3 },
+            { icon: '📡', status: '📡 Triggering system...', sub: 'Sending MQTT signal to ESP32-CAM + ESP32-S2 soil sensors', progress: 8, step: 1 },
+            { icon: '🌱', status: '🌱 Reading soil sensors...', sub: 'ESP32-S2 is measuring pH and moisture levels', progress: 20, step: 1 },
+            { icon: '📷', status: '📷 Capturing image...', sub: 'ESP32-CAM is photographing your crop leaf', progress: 35, step: 2 },
+            { icon: '📤', status: '📤 Uploading data...', sub: 'Sending captured image + soil data to the server', progress: 50, step: 2 },
+            { icon: '🧠', status: '🧠 Running AI diagnosis...', sub: 'Gemini AI is analyzing the leaf + soil conditions', progress: 70, step: 3 },
             { icon: '🌾', status: '🌾 Preparing treatment...', sub: 'Generating spray recipe and recommendations', progress: 88, step: 4 },
         ];
 
@@ -4487,10 +4536,24 @@
             }
         }
 
+        let iotSoilPollInterval = null;      // soil data polling timer
+        let iotSoilData = null;               // last received soil data
+
         /**
          * MAIN: Start the IoT automated analysis pipeline
          */
         async function startIoTAnalysis() {
+            // ── Validate crop selection ──
+            const cropSelect = document.getElementById('iotCropSelect');
+            const cropName = cropSelect ? cropSelect.value : '';
+            if (!cropName) {
+                cropSelect.style.borderColor = '#ef4444';
+                cropSelect.focus();
+                showNotification('⚠️ CROP REQUIRED', 'Please select your crop type before initializing the system.');
+                setTimeout(() => { cropSelect.style.borderColor = '#d1fae5'; }, 3000);
+                return;
+            }
+
             // Switch to scanning state
             setIoTState('iotScanningState');
 
@@ -4499,23 +4562,25 @@
             iotPollCount = 0;
             iotImageFound = false;
             iotImageUrl = null;
+            iotSoilData = null;
 
             // Initial UI
-            updateIoTScanUI('📡', '📡 Triggering camera...', 'Sending MQTT signal to ESP32-CAM in the field', 5, 1);
+            updateIoTScanUI('📡', '📡 Triggering system...', 'Sending MQTT signal to ESP32-CAM + ESP32-S2 soil sensors', 5, 1);
 
             // Hide image preview (will show when image arrives)
             document.getElementById('iotImagePreview').style.display = 'none';
 
             try {
-                // ── Call backend to trigger MQTT ──
+                // ── Call backend to trigger BOTH MQTT devices with crop_name ──
                 const resp = await authFetch('/api/init-analysis', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ crop_name: cropName })
                 });
                 const data = await resp.json();
 
                 if (!data.success) {
-                    showIoTError(data.error || 'Failed to trigger camera. Check MQTT configuration.');
+                    showIoTError(data.error || 'Failed to trigger system. Check MQTT configuration.');
                     return;
                 }
 
@@ -4529,14 +4594,41 @@
                     }, idx * 2500);
                 });
 
-                // ── Start polling for result AND image ──
+                // ── Start polling for result AND image AND soil data ──
                 startIoTPoll();
                 startIoTImagePoll();
+                startSoilPoll();
 
             } catch (e) {
                 if (e.message !== 'Session expired') {
                     showIoTError('Network error: ' + e.message);
                 }
+            }
+        }
+
+        /**
+         * Poll /api/soil-latest every 3 seconds for ESP32-S2 sensor readings
+         */
+        function startSoilPoll() {
+            if (iotSoilPollInterval) clearInterval(iotSoilPollInterval);
+            iotSoilPollInterval = setInterval(async () => {
+                try {
+                    const resp = await authFetch('/api/soil-latest');
+                    const data = await resp.json();
+                    if (data.success && data.has_data && data.soil) {
+                        iotSoilData = data.soil;
+                        stopSoilPoll();
+                    }
+                } catch (e) {
+                    console.warn('Soil poll error:', e.message);
+                }
+            }, 3000);
+        }
+
+        function stopSoilPoll() {
+            if (iotSoilPollInterval) {
+                clearInterval(iotSoilPollInterval);
+                iotSoilPollInterval = null;
             }
         }
 
@@ -4657,6 +4749,7 @@
                 iotPollingInterval = null;
             }
             stopIoTImagePoll();
+            stopSoilPoll();
         }
 
         /**
@@ -4685,6 +4778,42 @@
             const ts = prediction.created_at ? new Date(prediction.created_at).toLocaleString() : new Date().toLocaleString();
             document.getElementById('iotResultTimestamp').textContent = 'Analyzed at ' + ts;
 
+            // ── Show soil sensor data if available ──
+            const soilWrap = document.getElementById('iotSoilResultWrap');
+            if (soilWrap && iotSoilData) {
+                const ph = parseFloat(iotSoilData.ph || 0).toFixed(2);
+                const moisture = parseFloat(iotSoilData.moisture || 0).toFixed(1);
+
+                document.getElementById('iotResultPH').textContent = ph;
+                // pH label
+                let phLabel = 'Neutral';
+                if (ph < 5.5) phLabel = 'Too Acidic ⚠️';
+                else if (ph < 6.0) phLabel = 'Slightly Acidic';
+                else if (ph <= 7.5) phLabel = 'Optimal ✅';
+                else if (ph <= 8.0) phLabel = 'Slightly Alkaline';
+                else phLabel = 'Too Alkaline ⚠️';
+                document.getElementById('iotResultPHLabel').textContent = phLabel;
+
+                document.getElementById('iotResultMoisture').textContent = moisture + '%';
+                // Moisture label
+                let moistLabel = 'Normal';
+                if (moisture < 20) moistLabel = 'Very Dry ⚠️';
+                else if (moisture < 40) moistLabel = 'Low';
+                else if (moisture <= 70) moistLabel = 'Optimal ✅';
+                else moistLabel = 'Waterlogged ⚠️';
+                document.getElementById('iotResultMoistureLabel').textContent = moistLabel;
+
+                soilWrap.style.display = 'block';
+            } else if (soilWrap) {
+                // Try one last fetch in case data arrived late
+                fetch('/api/soil-latest').then(r => r.json()).then(d => {
+                    if (d.success && d.has_data && d.soil) {
+                        iotSoilData = d.soil;
+                        displaySoilInResult();
+                    }
+                }).catch(() => {});
+            }
+
             // Always try to show ESP32 captured image in result card
             const resultImgWrap = document.getElementById('iotResultImageWrap');
             const resultImg = document.getElementById('iotResultImage');
@@ -4711,11 +4840,38 @@
         }
 
         /**
+         * Helper: populate soil result card from iotSoilData (called from late fetch)
+         */
+        function displaySoilInResult() {
+            const soilWrap = document.getElementById('iotSoilResultWrap');
+            if (!soilWrap || !iotSoilData) return;
+            const ph = parseFloat(iotSoilData.ph || 0).toFixed(2);
+            const moisture = parseFloat(iotSoilData.moisture || 0).toFixed(1);
+            document.getElementById('iotResultPH').textContent = ph;
+            let phLabel = 'Neutral';
+            if (ph < 5.5) phLabel = 'Too Acidic ⚠️';
+            else if (ph < 6.0) phLabel = 'Slightly Acidic';
+            else if (ph <= 7.5) phLabel = 'Optimal ✅';
+            else if (ph <= 8.0) phLabel = 'Slightly Alkaline';
+            else phLabel = 'Too Alkaline ⚠️';
+            document.getElementById('iotResultPHLabel').textContent = phLabel;
+            document.getElementById('iotResultMoisture').textContent = moisture + '%';
+            let moistLabel = 'Normal';
+            if (moisture < 20) moistLabel = 'Very Dry ⚠️';
+            else if (moisture < 40) moistLabel = 'Low';
+            else if (moisture <= 70) moistLabel = 'Optimal ✅';
+            else moistLabel = 'Waterlogged ⚠️';
+            document.getElementById('iotResultMoistureLabel').textContent = moistLabel;
+            soilWrap.style.display = 'block';
+        }
+
+        /**
          * Show error state
          */
         function showIoTError(message) {
             stopIoTPoll();
             stopIoTImagePoll();
+            stopSoilPoll();
             setIoTState('iotErrorState');
             document.getElementById('iotErrorMessage').textContent = message || 'An unknown error occurred.';
         }
@@ -4726,6 +4882,7 @@
         function cancelIoTAnalysis() {
             stopIoTPoll();
             stopIoTImagePoll();
+            stopSoilPoll();
             resetIoTAnalysis();
             showNotification('CANCELLED', 'IoT scan cancelled');
         }
@@ -4736,15 +4893,19 @@
         function resetIoTAnalysis() {
             stopIoTPoll();
             stopIoTImagePoll();
+            stopSoilPoll();
             iotPollCount = 0;
             iotAnalysisTimestamp = null;
             iotImageFound = false;
+            iotSoilData = null;
             setIoTState('iotIdleState');
 
             // Reset scan UI
-            updateIoTScanUI('📡', '📡 Triggering camera...', 'Sending signal to ESP32-CAM', 0, 0);
+            updateIoTScanUI('📡', '📡 Triggering system...', 'Sending signal to ESP32-CAM + ESP32-S2', 0, 0);
             document.getElementById('iotImagePreview').style.display = 'none';
             document.getElementById('iotResultImageWrap').style.display = 'none';
+            const soilWrap = document.getElementById('iotSoilResultWrap');
+            if (soilWrap) soilWrap.style.display = 'none';
 
             // Clear preview image src to avoid stale images on next scan
             const previewImg = document.getElementById('iotPreviewImg');

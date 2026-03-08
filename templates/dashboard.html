@@ -1090,6 +1090,26 @@
                     </div>
                 </div>
 
+                <!-- Soil Sensor Readings Card -->
+                <div class="card" id="soilCard" style="display:none; animation-delay:.22s">
+                    <div class="card-h"><span class="ico">🌱</span><span class="ttl">Soil Sensors</span><span class="badge" id="soilBadge">ESP32-S2</span></div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                        <div style="background:linear-gradient(135deg, #fefce8, var(--slate-50)); padding:18px; text-align:center; border-radius:var(--r); border:1.5px solid #fef08a;">
+                            <div style="font-size:28px; margin-bottom:4px;">⚗️</div>
+                            <div style="font-size:10px; font-weight:700; color:var(--slate-400); text-transform:uppercase; letter-spacing:.5px;">Soil pH</div>
+                            <div id="dashSoilPH" style="font-size:26px; font-weight:800; color:#854d0e; margin-top:4px;">–</div>
+                            <div id="dashSoilPHLabel" style="font-size:11px; color:#a16207; margin-top:2px;"></div>
+                        </div>
+                        <div style="background:linear-gradient(135deg, var(--emerald-50), var(--slate-50)); padding:18px; text-align:center; border-radius:var(--r); border:1.5px solid var(--emerald-200);">
+                            <div style="font-size:28px; margin-bottom:4px;">💧</div>
+                            <div style="font-size:10px; font-weight:700; color:var(--slate-400); text-transform:uppercase; letter-spacing:.5px;">Soil Moisture</div>
+                            <div id="dashSoilMoisture" style="font-size:26px; font-weight:800; color:var(--emerald-700); margin-top:4px;">–</div>
+                            <div id="dashSoilMoistureLabel" style="font-size:11px; color:var(--emerald-600); margin-top:2px;"></div>
+                        </div>
+                    </div>
+                    <div style="text-align:center; margin-top:10px; font-size:11px; color:var(--slate-400);" id="soilTimestamp"></div>
+                </div>
+
                 <div class="disease-alert" id="recentDiseaseCard">
                     <div class="da-ico">🦠</div>
                     <div style="flex:1">
@@ -1220,8 +1240,44 @@
                 { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
         }
 
+        async function loadSoilData() {
+            try {
+                const r = await fetch('/api/soil-latest'); const d = await r.json();
+                if (d.success && d.has_data && d.soil) {
+                    const card = document.getElementById('soilCard');
+                    if (card) card.style.display = 'block';
+
+                    const ph = parseFloat(d.soil.ph || 0).toFixed(2);
+                    const moisture = parseFloat(d.soil.moisture || 0).toFixed(1);
+
+                    document.getElementById('dashSoilPH').textContent = ph;
+                    let phLabel = 'Neutral';
+                    if (ph < 5.5) phLabel = 'Too Acidic ⚠️';
+                    else if (ph < 6.0) phLabel = 'Slightly Acidic';
+                    else if (ph <= 7.5) phLabel = 'Optimal ✅';
+                    else if (ph <= 8.0) phLabel = 'Slightly Alkaline';
+                    else phLabel = 'Too Alkaline ⚠️';
+                    document.getElementById('dashSoilPHLabel').textContent = phLabel;
+
+                    document.getElementById('dashSoilMoisture').textContent = moisture + '%';
+                    let moistLabel = 'Normal';
+                    if (moisture < 20) moistLabel = 'Very Dry ⚠️';
+                    else if (moisture < 40) moistLabel = 'Low';
+                    else if (moisture <= 70) moistLabel = 'Optimal ✅';
+                    else moistLabel = 'Waterlogged ⚠️';
+                    document.getElementById('dashSoilMoistureLabel').textContent = moistLabel;
+
+                    if (d.received_at) {
+                        const ts = new Date(d.received_at).toLocaleString();
+                        document.getElementById('soilTimestamp').textContent = '🕐 Last reading: ' + ts;
+                    }
+                }
+            } catch (e) { /* soil data not available yet */ }
+        }
+
         loadWeather();
         loadStats();
+        loadSoilData();
     </script>
 </body>
 

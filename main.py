@@ -97,12 +97,39 @@ async def health_check():
     return {"status": "ok", "service": "agri-sentinel", "version": "2.0.0", "mqtt": mqtt_mod.is_connected()}
 
 # ─── MQTT lifecycle ───
+def _handle_soil_data(data: dict):
+    """Callback invoked by mqtt_client when soil sensor JSON arrives on agri/soil/data.
+    Stores data in Supabase soil_logs AND in-memory for frontend polling."""
+    global _last_soil_data, _last_soil_time
+    try:
+        ph_val = float(data.get("ph", 0))
+        moisture_val = float(data.get("moisture", 0))
+        device_id = data.get("device_id", "esp32_s2_soil_1")
+
+        _last_soil_data = {"ph": ph_val, "moisture": moisture_val, "device_id": device_id}
+        _last_soil_time = datetime.utcnow().isoformat()
+
+        # Persist to Supabase
+        supabase.table("soil_logs").insert({
+            "device_id": device_id,
+            "moisture": moisture_val,
+            "ph": ph_val,
+            "nitrogen": float(data.get("nitrogen", 0)),
+            "phosphorus": float(data.get("phosphorus", 0)),
+            "potassium": float(data.get("potassium", 0)),
+        }).execute()
+
+        logger.info(f"Soil data saved: pH={ph_val}, moisture={moisture_val}% (device={device_id})")
+    except Exception as e:
+        logger.error(f"Soil data handler error: {e}")
+
 @app.on_event("startup")
 async def startup_mqtt():
     """Initialize MQTT client on app startup (non-blocking)."""
     if mqtt_mod.is_configured():
+        mqtt_mod.set_soil_data_callback(_handle_soil_data)
         mqtt_mod.get_client()
-        logger.info("MQTT client initialized at startup")
+        logger.info("MQTT client initialized at startup (camera + soil)")
     else:
         logger.info("MQTT not configured — skipping IoT initialization")
 
@@ -321,6 +348,9 @@ _last_iot_trigger_user: Optional[str] = None
 # Store last ESP32 captured image URL (Supabase Storage) for frontend preview
 _last_esp32_image_url: Optional[str] = None
 _last_esp32_image_time: Optional[str] = None
+# Store latest soil sensor data received via MQTT from ESP32-S2
+_last_soil_data: Optional[dict] = None
+_last_soil_time: Optional[str] = None
 
 # ================= LANDING PAGE =================
 
@@ -932,27 +962,46 @@ async def init_session(request: Request, user: dict = Depends(get_current_user))
 @app.post("/api/init-analysis")
 async def init_analysis(request: Request, user: dict = Depends(get_current_user)):
     """
-    Trigger ESP32-CAM capture via MQTT.
-    Publishes START_CAPTURE to agri/camera/capture topic.
-    The ESP32 will capture an image, upload to Supabase Storage,
-    then call /api/esp32/image-ready with the image URL.
+    Initialize the full IoT system — ONE button triggers BOTH devices:
+      1. ESP32-CAM  → captures leaf image via agri/camera/capture
+      2. ESP32-S2   → reads pH + moisture sensors via agri/soil/trigger
+    Accepts optional crop_name in body to update the farmer's crop before analysis.
     """
-    global _last_iot_trigger_user
+    global _last_iot_trigger_user, _last_soil_data, _last_soil_time
     user_id = user["id"]
     _last_iot_trigger_user = user_id
+
+    # Clear stale soil data so frontend can poll for fresh reading
+    _last_soil_data = None
+    _last_soil_time = None
 
     # Check MQTT availability
     if not mqtt_mod.is_configured():
         return JSONResponse(
-            {"success": False, "error": "IoT camera not configured. MQTT credentials missing."},
+            {"success": False, "error": "IoT system not configured. MQTT credentials missing."},
             status_code=503
         )
+
+    # ── Update crop_name if provided ──
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    crop_name = body.get("crop_name")
+    if crop_name and crop_name.strip():
+        try:
+            supabase.table("farmer_profiles").update({
+                "crop_name": crop_name.strip()
+            }).eq("user_id", user_id).execute()
+            logger.info(f"Updated crop_name='{crop_name}' for user={user_id}")
+        except Exception as e:
+            logger.warning(f"Failed to update crop_name: {e}")
 
     # Create a session for this analysis
     session_id = f"iot_{user_id}_{int(__import__('time').time())}"
     sessions[session_id] = {
         "image_data": None,
-        "plant_type": None,
+        "plant_type": crop_name or None,
         "diagnosis": None,
         "recipe": None,
         "user_id": user_id,
@@ -961,23 +1010,26 @@ async def init_analysis(request: Request, user: dict = Depends(get_current_user)
     # Store session_id in user session so upload-image can find it
     request.session["iot_session_id"] = session_id
 
-    # Publish MQTT trigger
-    published = mqtt_mod.publish_capture_trigger()
+    # ── Trigger BOTH devices simultaneously ──
+    cam_published = mqtt_mod.publish_capture_trigger()
+    soil_published = mqtt_mod.publish_soil_trigger()
 
-    if published:
-        logger.info(f"IoT analysis triggered for user={user_id}, session={session_id}")
+    if cam_published or soil_published:
+        logger.info(f"IoT system triggered for user={user_id} — cam={cam_published}, soil={soil_published}")
         return JSONResponse({
             "success": True,
             "status": "triggered",
             "session_id": session_id,
-            "message": "Camera capture triggered via MQTT"
+            "cam_triggered": cam_published,
+            "soil_triggered": soil_published,
+            "message": "System initialized — camera + soil sensors triggered"
         })
     else:
         logger.warning(f"MQTT publish failed for user={user_id}")
         return JSONResponse({
             "success": False,
             "status": "mqtt_error",
-            "error": "Failed to reach camera. MQTT broker may be unavailable."
+            "error": "Failed to reach IoT devices. MQTT broker may be unavailable."
         }, status_code=502)
 
 # ================= API: IOT — LATEST PREDICTION (POLLING) =================
@@ -1037,6 +1089,52 @@ async def iot_status():
         "configured": mqtt_mod.is_configured(),
         "connected": mqtt_mod.is_connected()
     })
+
+# ================= API: SOIL DATA POLLING =================
+
+@app.get("/api/soil-latest")
+async def soil_latest(request: Request):
+    """
+    Poll for the latest soil sensor data from ESP32-S2.
+    Frontend calls this repeatedly after Initialize System to detect fresh readings.
+    Returns in-memory data (fast) with a fallback to Supabase.
+    """
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return JSONResponse({"success": False, "error": "Not authenticated"}, status_code=401)
+
+    # Return fresh in-memory data if available (set by MQTT callback)
+    if _last_soil_data and _last_soil_time:
+        return JSONResponse({
+            "success": True,
+            "has_data": True,
+            "soil": _last_soil_data,
+            "received_at": _last_soil_time
+        })
+
+    # Fallback: query Supabase for most recent entry
+    try:
+        resp = supabase.table("soil_logs") \
+            .select("ph, moisture, device_id, created_at") \
+            .order("created_at", desc=True) \
+            .limit(1) \
+            .execute()
+        if resp.data and len(resp.data) > 0:
+            row = resp.data[0]
+            return JSONResponse({
+                "success": True,
+                "has_data": True,
+                "soil": {
+                    "ph": row.get("ph", 0),
+                    "moisture": row.get("moisture", 0),
+                    "device_id": row.get("device_id", "unknown")
+                },
+                "received_at": row.get("created_at")
+            })
+    except Exception as e:
+        logger.error(f"Soil latest query error: {e}")
+
+    return JSONResponse({"success": True, "has_data": False, "soil": None})
 
 # ================= API: ESP32 IMAGE PREVIEW =================
 

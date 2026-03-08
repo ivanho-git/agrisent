@@ -88,3 +88,13 @@ AND farmer_id ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
 CREATE INDEX IF NOT EXISTS idx_predictions_user_id ON predictions(user_id);
 CREATE INDEX IF NOT EXISTS idx_predictions_farmer_id ON predictions(farmer_id);
 
+-- =====================================================
+-- 5. SOIL_LOGS TABLE — ensure columns exist for ESP32-S2 sensor data
+-- =====================================================
+ALTER TABLE soil_logs ADD COLUMN IF NOT EXISTS user_id UUID;
+ALTER TABLE soil_logs ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT now();
+
+-- Index for fast device + time queries
+CREATE INDEX IF NOT EXISTS idx_soil_logs_device_id ON soil_logs(device_id);
+CREATE INDEX IF NOT EXISTS idx_soil_logs_created_at ON soil_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_soil_logs_user_id ON soil_logs(user_id);

@@ -17,13 +17,29 @@ MQTT_PORT = int(os.environ.get("MQTT_PORT", "8883"))
 MQTT_USER = os.environ.get("MQTT_USER", "")
 MQTT_PASS = os.environ.get("MQTT_PASS", "")
 
-# Topics
+# Topics — Camera
 TOPIC_CAPTURE = "agri/camera/capture"
 TOPIC_STATUS = "agri/camera/status"
+
+# Topics — Soil Sensors (ESP32-S2)
+TOPIC_SOIL_TRIGGER = "agri/soil/trigger"
+TOPIC_SOIL_DATA = "agri/soil/data"
+TOPIC_SOIL_STATUS = "agri/soil/status"
 
 # ─── Singleton client ───
 _client: Optional[mqtt.Client] = None
 _connected = False
+
+# ─── Soil data callback (set by main.py at startup) ───
+_soil_data_callback = None
+
+
+def set_soil_data_callback(fn):
+    """Register a callback for incoming soil sensor data.
+    fn(payload_dict) will be called when data arrives on TOPIC_SOIL_DATA."""
+    global _soil_data_callback
+    _soil_data_callback = fn
+    logger.info("Soil data callback registered")
 
 
 def _on_connect(client, userdata, flags, reason_code, properties=None):
@@ -32,6 +48,8 @@ def _on_connect(client, userdata, flags, reason_code, properties=None):
         _connected = True
         logger.info("MQTT connected to broker successfully")
         client.subscribe(TOPIC_STATUS, qos=1)
+        client.subscribe(TOPIC_SOIL_DATA, qos=1)
+        client.subscribe(TOPIC_SOIL_STATUS, qos=1)
     else:
         _connected = False
         logger.warning(f"MQTT connection failed: reason_code={reason_code}")
@@ -44,7 +62,17 @@ def _on_disconnect(client, userdata, flags, reason_code, properties=None):
 
 
 def _on_message(client, userdata, msg):
-    logger.info(f"MQTT message on {msg.topic}: {msg.payload.decode('utf-8', errors='replace')}")
+    payload_str = msg.payload.decode('utf-8', errors='replace')
+    logger.info(f"MQTT message on {msg.topic}: {payload_str}")
+
+    # Route soil sensor data to the registered callback
+    if msg.topic == TOPIC_SOIL_DATA and _soil_data_callback:
+        try:
+            import json
+            data = json.loads(payload_str)
+            _soil_data_callback(data)
+        except Exception as e:
+            logger.error(f"Soil data callback error: {e}")
 
 
 def get_client() -> Optional[mqtt.Client]:
@@ -114,6 +142,30 @@ def publish_capture_trigger() -> bool:
             return False
     except Exception as e:
         logger.error(f"MQTT publish error: {e}")
+        return False
+
+
+def publish_soil_trigger() -> bool:
+    """
+    Publish a READ_SENSORS message to the soil sensor topic.
+    Triggers ESP32-S2 to read pH and moisture sensors.
+    Returns True if published, False otherwise.
+    """
+    client = get_client()
+    if client is None:
+        logger.warning("MQTT client not available — cannot publish soil trigger")
+        return False
+
+    try:
+        result = client.publish(TOPIC_SOIL_TRIGGER, payload="READ_SENSORS", qos=1)
+        if result.rc == mqtt.MQTT_ERR_SUCCESS:
+            logger.info(f"Published READ_SENSORS to {TOPIC_SOIL_TRIGGER}")
+            return True
+        else:
+            logger.error(f"MQTT soil publish failed: rc={result.rc}")
+            return False
+    except Exception as e:
+        logger.error(f"MQTT soil publish error: {e}")
         return False
 
 
