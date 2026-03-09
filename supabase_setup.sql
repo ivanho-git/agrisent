@@ -89,12 +89,28 @@ CREATE INDEX IF NOT EXISTS idx_predictions_user_id ON predictions(user_id);
 CREATE INDEX IF NOT EXISTS idx_predictions_farmer_id ON predictions(farmer_id);
 
 -- =====================================================
--- 5. SOIL_LOGS TABLE — ensure columns exist for ESP32-S2 sensor data
+-- 5. SOIL_LOGS TABLE — ensure table + columns exist for ESP32-S2 sensor data
 -- =====================================================
+CREATE TABLE IF NOT EXISTS soil_logs (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    device_id TEXT DEFAULT 'esp32_s2_soil_1',
+    user_id UUID,
+    moisture DOUBLE PRECISION DEFAULT 0,
+    ph DOUBLE PRECISION DEFAULT 0,
+    nitrogen DOUBLE PRECISION DEFAULT 0,
+    phosphorus DOUBLE PRECISION DEFAULT 0,
+    potassium DOUBLE PRECISION DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Add columns if table already existed without them
 ALTER TABLE soil_logs ADD COLUMN IF NOT EXISTS user_id UUID;
 ALTER TABLE soil_logs ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT now();
+ALTER TABLE soil_logs ADD COLUMN IF NOT EXISTS nitrogen DOUBLE PRECISION DEFAULT 0;
+ALTER TABLE soil_logs ADD COLUMN IF NOT EXISTS phosphorus DOUBLE PRECISION DEFAULT 0;
+ALTER TABLE soil_logs ADD COLUMN IF NOT EXISTS potassium DOUBLE PRECISION DEFAULT 0;
 
--- Index for fast device + time queries
+-- Index for fast device + time + user queries
 CREATE INDEX IF NOT EXISTS idx_soil_logs_device_id ON soil_logs(device_id);
 CREATE INDEX IF NOT EXISTS idx_soil_logs_created_at ON soil_logs(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_soil_logs_user_id ON soil_logs(user_id);

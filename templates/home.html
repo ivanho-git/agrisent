@@ -4,9 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
-    <title>AGRI-SENTINEL — AI-Powered Smart Agriculture</title>
+    <title>AGRI-SENTINEL — Autonomous AI-Powered Agricultural Robot</title>
     <meta name="description"
-        content="Real-time crop disease detection, satellite monitoring, weather intelligence & precision farming tools for Indian farmers.">
+        content="Autonomous AI-powered agricultural robot for real-time crop disease detection, on-site chemical mixing, and precision pesticide spraying — built for Indian farmers.">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap"
         rel="stylesheet">
     <style>
@@ -1089,6 +1089,122 @@
                 font-size: 32px
             }
         }
+
+        /* TEAM SECTION */
+        .team { background: #fff; }
+        .team-h { text-align: center; margin-bottom: 56px; }
+        .team-name {
+            font-size: clamp(42px, 6vw, 64px);
+            font-weight: 900;
+            letter-spacing: 12px;
+            text-transform: uppercase;
+            background: linear-gradient(135deg, var(--e9), var(--e6), var(--a5));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 6px;
+        }
+        .team-expand {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--s5);
+            letter-spacing: 3px;
+            margin-bottom: 8px;
+        }
+        .team-g {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 20px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        .team-card {
+            text-align: center;
+            background: var(--s0);
+            border: 1px solid var(--s2);
+            border-radius: var(--rx);
+            padding: 28px 16px 24px;
+            transition: .35s;
+            position: relative;
+            overflow: hidden;
+        }
+        .team-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--e5), var(--a5));
+            opacity: 0;
+            transition: .35s;
+        }
+        .team-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 16px 40px rgba(0,0,0,.08);
+            border-color: var(--e2);
+        }
+        .team-card:hover::before { opacity: 1; }
+        .team-avatar {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--e1), var(--s1));
+            border: 3px solid var(--e3);
+            margin: 0 auto 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            color: var(--e7);
+            overflow: hidden;
+            position: relative;
+        }
+        .team-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+        .team-avatar .initial {
+            font-weight: 800;
+            font-size: 32px;
+        }
+        .team-member-name {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--s9);
+            margin-bottom: 4px;
+        }
+        .team-role {
+            font-size: 12px;
+            color: var(--s5);
+            font-weight: 500;
+            line-height: 1.5;
+        }
+        .team-letter {
+            display: inline-block;
+            width: 26px;
+            height: 26px;
+            background: linear-gradient(135deg, var(--e6), var(--e5));
+            color: #fff;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 800;
+            line-height: 26px;
+            text-align: center;
+            margin-top: 10px;
+        }
+        @media(max-width:900px) {
+            .team-g { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media(max-width:600px) {
+            .team-g { grid-template-columns: repeat(2, 1fr); gap: 14px; }
+            .team-name { letter-spacing: 6px; }
+            .team-avatar { width: 72px; height: 72px; }
+            .team-avatar .initial { font-size: 26px; }
+        }
+        @media(max-width:480px) {
+            .team-g { grid-template-columns: 1fr 1fr; }
+        }
     </style>
 </head>
 
@@ -1101,36 +1217,36 @@
             <a href="#features" class="nav-link" onclick="closeNav()">Features</a>
             <a href="#how" class="nav-link" onclick="closeNav()">How It Works</a>
             <a href="#tech" class="nav-link" onclick="closeNav()">Tech</a>
+            <a href="#team" class="nav-link" onclick="closeNav()">Team</a>
             <a href="/login" class="nav-cta">🚜 Get Started</a>
         </div>
     </nav>
 
     <section class="hero">
         <div class="hero-c">
-            <div class="hero-badge"><span class="dot"></span>AI-Powered Smart Agriculture</div>
-            <h1 class="hero-t">Protect Your Crops<br>With <span>Autonomous AI Robots</span></h1>
-            <p class="hero-sub">Our custom robot roams your field taking photos of diseased leaves, predicting the
-                disease, and spraying pesticide automatically — built for Indian farmers.</p>
+            <div class="hero-badge"><span class="dot"></span>Team KAIRO — Patent Pending</div>
+            <h1 class="hero-t">Autonomous Robot That<br><span>Detects, Mixes & Sprays</span></h1>
+            <p class="hero-sub">AGRI-SENTINEL autonomously traverses your field, detects crop diseases using AI vision, mixes precise chemical recipes on-board, and sprays only the affected plants — zero human intervention.</p>
             <div class="hero-btns">
-                <a href="/login" class="btn-p">🚜 Start Farming Free →</a>
-                <a href="#features" class="btn-s">🔬 Explore Features</a>
+                <a href="/login" class="btn-p">🚜 Launch Dashboard →</a>
+                <a href="#features" class="btn-s">🔬 See How It Works</a>
             </div>
             <div class="hero-stats">
                 <div class="hs">
-                    <div class="n">15+</div>
-                    <div class="l">Crops Supported</div>
+                    <div class="n">3+</div>
+                    <div class="l">Chemical Containers</div>
+                </div>
+                <div class="hs">
+                    <div class="n">±0.5ml</div>
+                    <div class="l">Dosing Precision</div>
+                </div>
+                <div class="hs">
+                    <div class="n">24/7</div>
+                    <div class="l">Autonomous Patrol</div>
                 </div>
                 <div class="hs">
                     <div class="n">9</div>
                     <div class="l">Indian Languages</div>
-                </div>
-                <div class="hs">
-                    <div class="n">24/7</div>
-                    <div class="l">AI Monitoring</div>
-                </div>
-                <div class="hs">
-                    <div class="n">Free</div>
-                    <div class="l">For All Farmers</div>
                 </div>
             </div>
         </div>
@@ -1139,84 +1255,74 @@
 
     <section class="features" id="features">
         <div class="fh">
-            <div class="stag">✨ Features</div>
-            <h2 class="stitle">Everything Your Farm Needs</h2>
-            <p class="sdesc" style="margin:0 auto">From AI disease detection to satellite imagery — one platform to
-                manage it all.</p>
+            <div class="stag">✨ Core Subsystems</div>
+            <h2 class="stitle">End-to-End Precision Farming</h2>
+            <p class="sdesc" style="margin:0 auto">Six integrated subsystems — from AI vision to on-board chemical mixing — working as one autonomous pipeline.</p>
         </div>
         <div class="fg">
             <div class="fc">
                 <div class="fi">🤖</div>
-                <div class="fn">Robot Integration</div>
-                <div class="fd">A smart robot that autonomously navigates the field, takes photos of diseased leaves,
-                    predicts the disease, and precisely sprays pesticide.</div>
+                <div class="fn">Autonomous Robot Platform</div>
+                <div class="fd">Four-wheel differential drive robot with GPS waypoint navigation, obstacle avoidance (ultrasonic/LiDAR), and automatic shed-to-field traversal across Indian crop rows.</div>
+            </div>
+            <div class="fc">
+                <div class="fi">🔬</div>
+                <div class="fn">AI Disease Detection</div>
+                <div class="fd">ESP32-CAM captures leaf images via MQTT. Google Gemini 2.5 Flash identifies disease, pathogen type, severity (0–100), and generates a precise chemical recipe — all in real time.</div>
+            </div>
+            <div class="fc">
+                <div class="fi">⚗️</div>
+                <div class="fn">On-Board Chemical Mixing</div>
+                <div class="fd">Up to 8 sealed chemical reservoirs with peristaltic dosing pumps (±0.5 ml accuracy). Stainless-steel mixing chamber with magnetic agitator prepares fresh formulations on-site.</div>
+            </div>
+            <div class="fc">
+                <div class="fi">🎯</div>
+                <div class="fn">Precision Targeted Spraying</div>
+                <div class="fd">Variable-rate spray nozzle array on articulated boom. GPS-correlated targeting sprays only diseased zones — no blanket application, no chemical waste.</div>
             </div>
             <div class="fc">
                 <div class="fi">🛰️</div>
-                <div class="fn">Satellite Monitoring</div>
-                <div class="fd">NDVI vegetation health index & soil data via satellite for registered fields. Track crop
-                    health from space with real-time updates.</div>
+                <div class="fn">Satellite & Soil Monitoring</div>
+                <div class="fd">NDVI vegetation index via Agromonitoring API, ESP32-S2 soil sensors (pH + moisture via MQTT), PostGIS field polygon mapping, and OpenWeatherMap integration.</div>
             </div>
             <div class="fc">
-                <div class="fi">☀️</div>
-                <div class="fn">Weather Intelligence</div>
-                <div class="fd">Auto-detects your village — shows temperature, humidity, wind & cloud cover for smarter
-                    farming decisions every day.</div>
-            </div>
-            <div class="fc">
-                <div class="fi">🎤</div>
-                <div class="fn">Voice Market Help</div>
-                <div class="fd">Speak in Hindi, Tamil, Telugu, or 8 other languages. Get mandi prices, crop rates &
-                    selling tips via Sarvam AI voice assistant.</div>
-            </div>
-            <div class="fc">
-                <div class="fi">🗺️</div>
-                <div class="fn">GPS Field Mapping</div>
-                <div class="fd">Register your field with GPS. Get accurate polygon boundaries using PostGIS and unlock
-                    satellite features for your exact plot.</div>
-            </div>
-            <div class="fc">
-                <div class="fi">📊</div>
-                <div class="fn">Scan History</div>
-                <div class="fd">Track all your past crop scans, disease detections & treatment recipes. Monitor trends
-                    in your farm's health over time.</div>
+                <div class="fi">📱</div>
+                <div class="fn">Farmer-in-the-Loop Interface</div>
+                <div class="fd">Web dashboard with real-time alerts, one-click approval workflow, scan history, multilingual Sarvam AI voice assistant for market prices — 9 Indian languages supported.</div>
             </div>
         </div>
     </section>
 
     <section class="how" id="how">
         <div class="hh">
-            <div class="stag">🔄 How It Works</div>
-            <h2 class="stitle">Simple as 1-2-3</h2>
-            <p class="sdesc" style="margin:0 auto">No technical knowledge needed. Start protecting crops in minutes.</p>
+            <div class="stag">🔄 Autonomous Pipeline</div>
+            <h2 class="stitle">Detect → Alert → Mix → Spray</h2>
+            <p class="sdesc" style="margin:0 auto">The robot handles the entire disease management cycle — you just approve the treatment.</p>
         </div>
         <div class="hg">
             <div class="hs2">
                 <div class="hnum">1</div>
-                <div class="hico">📱</div>
-                <div class="hname">Login with Phone</div>
-                <div class="hdesc">Enter your phone number — no OTP. Set up your farm profile in 2 minutes.</div>
+                <div class="hico">🤖</div>
+                <div class="hname">Robot Patrols Field</div>
+                <div class="hdesc">AGRI-SENTINEL exits its shed, navigates crop rows via GPS waypoints, and captures leaf images using the ESP32-CAM module.</div>
             </div>
             <div class="hs2">
                 <div class="hnum">2</div>
-                <div class="hico">📸</div>
-                <div class="hname">Scan Your Crop</div>
-                <div class="hdesc">Take a photo of any diseased leaf. AI analyzes it instantly and identifies the
-                    problem.</div>
+                <div class="hico">🧠</div>
+                <div class="hname">AI Diagnoses Disease</div>
+                <div class="hdesc">Gemini 2.5 Flash analyses the leaf image, identifies the pathogen, scores severity (0–100), and generates a chemical mixing recipe.</div>
             </div>
             <div class="hs2">
                 <div class="hnum">3</div>
-                <div class="hico">💊</div>
-                <div class="hname">Get Treatment</div>
-                <div class="hdesc">Get precise treatment recipes with exact mixing ratios. Save your crop before it's
-                    too late.</div>
+                <div class="hico">✅</div>
+                <div class="hname">Farmer Approves</div>
+                <div class="hdesc">You receive a real-time alert on your dashboard with the disease report. One click to approve mixing — the safety gate ensures farmer awareness.</div>
             </div>
             <div class="hs2">
                 <div class="hnum">4</div>
-                <div class="hico">📈</div>
-                <div class="hname">Monitor & Grow</div>
-                <div class="hdesc">Track field health via satellite, get weather alerts, ask voice assistant for market
-                    prices.</div>
+                <div class="hico">⚗️</div>
+                <div class="hname">Mix & Spray</div>
+                <div class="hdesc">Peristaltic pumps dose exact chemical volumes into the mixing chamber. The freshly prepared solution is sprayed precisely on diseased plants only.</div>
             </div>
         </div>
     </section>
@@ -1224,20 +1330,20 @@
     <section class="statsb">
         <div class="statsi">
             <div class="sti">
-                <div class="sn">15+</div>
-                <div class="sl">Crops Detected</div>
+                <div class="sn">8</div>
+                <div class="sl">Chemical Reservoirs</div>
             </div>
             <div class="sti">
-                <div class="sn">9</div>
-                <div class="sl">Languages</div>
+                <div class="sn">±0.5ml</div>
+                <div class="sl">Dosing Accuracy</div>
             </div>
             <div class="sti">
-                <div class="sn">5</div>
-                <div class="sl">AI APIs</div>
+                <div class="sn">6</div>
+                <div class="sl">Integrated APIs</div>
             </div>
             <div class="sti">
                 <div class="sn">100%</div>
-                <div class="sl">Free</div>
+                <div class="sl">Autonomous</div>
             </div>
         </div>
     </section>
@@ -1245,15 +1351,14 @@
     <section class="showcase">
         <div class="sci">
             <div class="sct">
-                <div class="stag">🛰️ Satellite</div>
-                <h2 class="stitle">See Your Farm<br>From Space</h2>
-                <p class="sdesc">Register your field and unlock real-time satellite data — vegetation index, soil
-                    moisture, temperature.</p>
+                <div class="stag">📡 IoT Sensor Suite</div>
+                <h2 class="stitle">Real-Time Data<br>From Field to Cloud</h2>
+                <p class="sdesc">ESP32 microcontrollers, MQTT messaging, satellite APIs, and soil sensors feed live data into the AGRI-SENTINEL platform — enabling precision decisions.</p>
                 <div class="scl">
-                    <div class="sci2"><span class="i">🌿</span><span class="t">NDVI Vegetation Health Index</span></div>
-                    <div class="sci2"><span class="i">🌡️</span><span class="t">Soil Temperature & Moisture</span></div>
-                    <div class="sci2"><span class="i">🗺️</span><span class="t">PostGIS Polygon Mapping</span></div>
-                    <div class="sci2"><span class="i">📡</span><span class="t">Agromonitoring API</span></div>
+                    <div class="sci2"><span class="i">📷</span><span class="t">ESP32-CAM — Leaf Image Capture via MQTT</span></div>
+                    <div class="sci2"><span class="i">🌱</span><span class="t">ESP32-S2 — Soil pH & Moisture Sensors</span></div>
+                    <div class="sci2"><span class="i">🛰️</span><span class="t">NDVI & Satellite via Agromonitoring API</span></div>
+                    <div class="sci2"><span class="i">🗺️</span><span class="t">PostGIS Field Polygons + GPS Navigation</span></div>
                 </div>
             </div>
             <div class="scv">
@@ -1284,45 +1389,107 @@
 
     <section class="tech" id="tech">
         <div class="th">
-            <div class="stag">⚡ Technology</div>
-            <h2 class="stitle">Built With The Best</h2>
-            <p class="sdesc" style="margin:0 auto">Enterprise-grade tech powering every insight.</p>
+            <div class="stag">⚡ Technology Stack</div>
+            <h2 class="stitle">Enterprise-Grade IoT + AI</h2>
+            <p class="sdesc" style="margin:0 auto">From microcontrollers to cloud AI — every layer purpose-built for Indian agriculture.</p>
         </div>
         <div class="tg">
             <div class="tp"><span class="i">⚡</span>FastAPI</div>
             <div class="tp"><span class="i">🐘</span>PostgreSQL + PostGIS</div>
-            <div class="tp"><span class="i">🤖</span>Google Gemini 2.5</div>
-            <div class="tp"><span class="i">🛰️</span>Agromonitoring</div>
+            <div class="tp"><span class="i">🤖</span>Google Gemini 2.5 Flash</div>
+            <div class="tp"><span class="i">📡</span>MQTT (HiveMQ Cloud)</div>
+            <div class="tp"><span class="i">📷</span>ESP32-CAM</div>
+            <div class="tp"><span class="i">🌱</span>ESP32-S2 Soil Sensors</div>
+            <div class="tp"><span class="i">🛰️</span>Agromonitoring API</div>
             <div class="tp"><span class="i">☀️</span>OpenWeatherMap</div>
-            <div class="tp"><span class="i">🎤</span>Sarvam AI</div>
+            <div class="tp"><span class="i">🎤</span>Sarvam AI (9 Languages)</div>
             <div class="tp"><span class="i">💚</span>Supabase</div>
-            <div class="tp"><span class="i">🐍</span>Python 3.11+</div>
+        </div>
+    </section>
+
+    <section class="team" id="team">
+        <div class="team-h">
+            <div class="stag">👥 The Builders</div>
+            <div class="team-name">KAIRO</div>
+            <div class="team-expand">K &middot; A &middot; I &middot; R &middot; O</div>
+            <p class="sdesc" style="margin:0 auto">Five engineers building autonomous farming technology for every Indian farmer.</p>
+        </div>
+        <div class="team-g">
+            <div class="team-card">
+                <div class="team-avatar">
+                    <!-- Replace with: <img src="/static/img/kirthik.jpg" alt="Kirthik"> -->
+                    <span class="initial">K</span>
+                </div>
+                <div class="team-member-name">Kirthik Sudarshan</div>
+                <div class="team-role">Co-Founder</div>
+                <div class="team-letter">K</div>
+            </div>
+            <div class="team-card">
+                <div class="team-avatar">
+                    <!-- Replace with: <img src="/static/img/advaith.jpg" alt="Advaith"> -->
+                    <span class="initial">A</span>
+                </div>
+                <div class="team-member-name">Advaith Nair</div>
+                <div class="team-role">Co-Founder</div>
+                <div class="team-letter">A</div>
+            </div>
+            <div class="team-card">
+                <div class="team-avatar">
+                    <!-- Replace with: <img src="/static/img/ibhan.jpg" alt="Ibhan"> -->
+                    <span class="initial">I</span>
+                </div>
+                <div class="team-member-name">Ibhan Mukherjee</div>
+                <div class="team-role">Co-Founder</div>
+                <div class="team-letter">I</div>
+            </div>
+            <div class="team-card">
+                <div class="team-avatar">
+                    <!-- Replace with: <img src="/static/img/ramanathan.jpg" alt="Ramanathan"> -->
+                    <span class="initial">R</span>
+                </div>
+                <div class="team-member-name">Ramanathan</div>
+                <div class="team-role">Co-Founder</div>
+                <div class="team-letter">R</div>
+            </div>
+            <div class="team-card">
+                <div class="team-avatar">
+                    <!-- Replace with: <img src="/static/img/om.jpg" alt="Om"> -->
+                    <span class="initial">O</span>
+                </div>
+                <div class="team-member-name">Om Thavari</div>
+                <div class="team-role">Co-Founder</div>
+                <div class="team-letter">O</div>
+            </div>
         </div>
     </section>
 
     <section class="cta-s">
         <div class="cta-i">
-            <h2 class="stitle">Ready to Protect<br>Your Crops?</h2>
-            <p class="sdesc">Join Indian farmers using AI to detect diseases early, save crops, and increase yields.</p>
-            <a href="/login" class="cta-btn">🌾 Start Free Now →</a>
+            <h2 class="stitle">The Future of Farming<br>Is Autonomous</h2>
+            <p class="sdesc">Built by Team KAIRO for every Indian farmer — AGRI-SENTINEL autonomously detects crop diseases, mixes precise treatments on-board, and sprays only where needed.</p>
+            <a href="/login" class="cta-btn">🌾 Launch Dashboard →</a>
         </div>
     </section>
 
     <footer class="ft">
         <div class="ft-b">🌱 AGRI-SENTINEL</div>
-        <div class="ft-t">AI-Powered Smart Agriculture Platform<br>Made with ❤️ for Indian Farmers</div>
+        <div class="ft-t">Autonomous AI-Powered Agricultural Robot<br>Patent Pending — Built for Indian Farmers</div>
+        <div style="margin-bottom:16px;font-size:13px;color:rgba(255,255,255,.55);line-height:1.7">
+            Built by <span style="color:rgba(255,255,255,.85);font-weight:700;letter-spacing:.5px">Team KAIRO</span><br>
+            <span style="font-size:11px;color:rgba(255,255,255,.35)">Kirthik Sudarshan &middot; Advaith Nair &middot; Ibhan Mukherjee &middot; Ramanathan &middot; Om Thavari</span>
+        </div>
         <div class="ft-l">
-            <a href="#features">Features</a><a href="#how">How It Works</a><a href="#tech">Tech</a>
+            <a href="#features">Features</a><a href="#how">How It Works</a><a href="#tech">Tech</a><a href="#team">Team</a>
             <a href="https://agrobit-forum.vercel.app/" target="_blank">Forum</a><a href="/login">Login</a>
         </div>
-        <div class="ft-c">© 2025 AGRI-SENTINEL. All rights reserved. 🌾</div>
+        <div class="ft-c">© 2026 Team KAIRO — AGRI-SENTINEL. All rights reserved. Patent Pending. 🌾</div>
     </footer>
 
     <script>
         const nv = document.getElementById('mainNav');
         window.addEventListener('scroll', () => nv.classList.toggle('scrolled', window.scrollY > 60));
         const obs = new IntersectionObserver(e => { e.forEach(x => { if (x.isIntersecting) { x.target.style.animation = 'fadeUp .6s ease forwards'; obs.unobserve(x.target) } }) }, { threshold: .1 });
-        document.querySelectorAll('.fc,.hs2,.tp,.sti').forEach(e => { e.style.opacity = '0'; obs.observe(e) });
+        document.querySelectorAll('.fc,.hs2,.tp,.sti,.team-card').forEach(e => { e.style.opacity = '0'; obs.observe(e) });
         function toggleNav() { document.getElementById('navRight').classList.toggle('open'); document.getElementById('navOverlay').classList.toggle('open'); document.getElementById('navToggle').textContent = document.getElementById('navRight').classList.contains('open') ? '✕' : '☰'; }
         function closeNav() { document.getElementById('navRight').classList.remove('open'); document.getElementById('navOverlay').classList.remove('open'); document.getElementById('navToggle').textContent = '☰'; }
     </script>

@@ -31,6 +31,9 @@ dbdebug.txt
 dbout.txt
 test_imports.py
 
+# Arduino / ESP32 (contain hardcoded credentials)
+*.ino
+
 # OS
 Thumbs.db
 .DS_Store

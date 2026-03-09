@@ -109,17 +109,23 @@ def _handle_soil_data(data: dict):
         _last_soil_data = {"ph": ph_val, "moisture": moisture_val, "device_id": device_id}
         _last_soil_time = datetime.utcnow().isoformat()
 
+        # Link to the farmer who triggered the analysis
+        user_id = _last_iot_trigger_user
+
         # Persist to Supabase
-        supabase.table("soil_logs").insert({
+        row = {
             "device_id": device_id,
             "moisture": moisture_val,
             "ph": ph_val,
             "nitrogen": float(data.get("nitrogen", 0)),
             "phosphorus": float(data.get("phosphorus", 0)),
             "potassium": float(data.get("potassium", 0)),
-        }).execute()
+        }
+        if user_id:
+            row["user_id"] = user_id
+        supabase.table("soil_logs").insert(row).execute()
 
-        logger.info(f"Soil data saved: pH={ph_val}, moisture={moisture_val}% (device={device_id})")
+        logger.info(f"Soil data saved: pH={ph_val}, moisture={moisture_val}% (device={device_id}, user={user_id})")
     except Exception as e:
         logger.error(f"Soil data handler error: {e}")
 
@@ -1109,11 +1115,12 @@ async def iot_status():
 # ================= API: SOIL DATA POLLING =================
 
 @app.get("/api/soil-latest")
-async def soil_latest(request: Request):
+async def soil_latest(request: Request, after: str = None):
     """
     Poll for the latest soil sensor data from ESP32-S2.
     Frontend calls this repeatedly after Initialize System to detect fresh readings.
     Returns in-memory data (fast) with a fallback to Supabase.
+    Optional `after` param: only return data newer than this ISO timestamp.
     """
     user_id = request.session.get("user_id")
     if not user_id:
@@ -1121,20 +1128,27 @@ async def soil_latest(request: Request):
 
     # Return fresh in-memory data if available (set by MQTT callback)
     if _last_soil_data and _last_soil_time:
-        return JSONResponse({
-            "success": True,
-            "has_data": True,
-            "soil": _last_soil_data,
-            "received_at": _last_soil_time
-        })
+        # If 'after' specified, only return if soil data is newer
+        if after and _last_soil_time <= after:
+            pass  # fall through to "no data" or DB
+        else:
+            return JSONResponse({
+                "success": True,
+                "has_data": True,
+                "soil": _last_soil_data,
+                "received_at": _last_soil_time
+            })
 
-    # Fallback: query Supabase for most recent entry
+    # Fallback: query Supabase for most recent entry for this user
     try:
-        resp = supabase.table("soil_logs") \
-            .select("ph, moisture, device_id, created_at") \
+        query = supabase.table("soil_logs") \
+            .select("ph, moisture, nitrogen, phosphorus, potassium, device_id, created_at") \
             .order("created_at", desc=True) \
-            .limit(1) \
-            .execute()
+            .limit(1)
+        # Filter by user if available
+        if user_id:
+            query = query.eq("user_id", user_id)
+        resp = query.execute()
         if resp.data and len(resp.data) > 0:
             row = resp.data[0]
             return JSONResponse({
@@ -1143,6 +1157,9 @@ async def soil_latest(request: Request):
                 "soil": {
                     "ph": row.get("ph", 0),
                     "moisture": row.get("moisture", 0),
+                    "nitrogen": row.get("nitrogen", 0),
+                    "phosphorus": row.get("phosphorus", 0),
+                    "potassium": row.get("potassium", 0),
                     "device_id": row.get("device_id", "unknown")
                 },
                 "received_at": row.get("created_at")
@@ -1151,6 +1168,90 @@ async def soil_latest(request: Request):
         logger.error(f"Soil latest query error: {e}")
 
     return JSONResponse({"success": True, "has_data": False, "soil": None})
+
+# ================= API: MANUAL NPK INPUT =================
+
+@app.post("/api/soil-npk")
+async def soil_npk_input(request: Request):
+    """
+    Farmer manually inputs NPK values from the website.
+    Updates the latest soil_logs row for the user with NPK values,
+    or creates a new row if none exists.
+    """
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return JSONResponse({"success": False, "error": "Not authenticated"}, status_code=401)
+
+    try:
+        body = await request.json()
+        nitrogen = float(body.get("nitrogen", 0))
+        phosphorus = float(body.get("phosphorus", 0))
+        potassium = float(body.get("potassium", 0))
+
+        # Try to update the latest soil_logs row for this user
+        latest = supabase.table("soil_logs") \
+            .select("id") \
+            .eq("user_id", user_id) \
+            .order("created_at", desc=True) \
+            .limit(1) \
+            .execute()
+
+        if latest.data and len(latest.data) > 0:
+            # Update existing row with NPK
+            supabase.table("soil_logs").update({
+                "nitrogen": nitrogen,
+                "phosphorus": phosphorus,
+                "potassium": potassium,
+            }).eq("id", latest.data[0]["id"]).execute()
+        else:
+            # No sensor data yet — create a row with only NPK
+            supabase.table("soil_logs").insert({
+                "device_id": "manual_npk",
+                "user_id": user_id,
+                "moisture": 0,
+                "ph": 0,
+                "nitrogen": nitrogen,
+                "phosphorus": phosphorus,
+                "potassium": potassium,
+            }).execute()
+
+        # Update in-memory soil data too
+        global _last_soil_data
+        if _last_soil_data:
+            _last_soil_data["nitrogen"] = nitrogen
+            _last_soil_data["phosphorus"] = phosphorus
+            _last_soil_data["potassium"] = potassium
+
+        logger.info(f"NPK updated: N={nitrogen}, P={phosphorus}, K={potassium} for user={user_id}")
+        return JSONResponse({"success": True, "message": "NPK values saved"})
+
+    except Exception as e:
+        logger.error(f"NPK input error: {e}")
+        return JSONResponse({"success": False, "error": str(e)})
+
+# ================= API: SOIL HISTORY =================
+
+@app.get("/api/soil-history")
+async def soil_history(request: Request):
+    """Get soil sensor data history for the current farmer."""
+    user_id = request.session.get("user_id")
+    if not user_id:
+        return JSONResponse({"success": False, "error": "Not authenticated"}, status_code=401)
+
+    try:
+        resp = supabase.table("soil_logs") \
+            .select("ph, moisture, nitrogen, phosphorus, potassium, device_id, created_at") \
+            .eq("user_id", user_id) \
+            .order("created_at", desc=True) \
+            .limit(20) \
+            .execute()
+        return JSONResponse({
+            "success": True,
+            "history": resp.data if resp.data else []
+        })
+    except Exception as e:
+        logger.error(f"Soil history error: {e}")
+        return JSONResponse({"success": True, "history": []})
 
 # ================= API: ESP32 IMAGE PREVIEW =================
 
@@ -1359,21 +1460,42 @@ def _run_recipe_internal(session_id: str, soil_data: dict = None) -> dict | None
     soil_context = "No soil sensor data available."
     soil_ph = None
     soil_moisture = None
+    soil_nitrogen = None
+    soil_phosphorus = None
+    soil_potassium = None
     if soil_data and soil_data.get("ph"):
         soil_ph = float(soil_data["ph"])
         soil_moisture = float(soil_data.get("moisture", 0))
+        soil_nitrogen = float(soil_data.get("nitrogen", 0))
+        soil_phosphorus = float(soil_data.get("phosphorus", 0))
+        soil_potassium = float(soil_data.get("potassium", 0))
+        npk_line = ""
+        if soil_nitrogen or soil_phosphorus or soil_potassium:
+            npk_line = f"""
+        - Nitrogen (N): {soil_nitrogen} ppm
+        - Phosphorus (P): {soil_phosphorus} ppm
+        - Potassium (K): {soil_potassium} ppm"""
         soil_context = f"""
         Live Soil Sensor Readings (from ESP32-S2):
         - Soil pH: {soil_ph}
-        - Soil Moisture: {soil_moisture}%
+        - Soil Moisture: {soil_moisture}%{npk_line}
         """
     elif _last_soil_data:
         soil_ph = float(_last_soil_data.get("ph", 0))
         soil_moisture = float(_last_soil_data.get("moisture", 0))
+        soil_nitrogen = float(_last_soil_data.get("nitrogen", 0))
+        soil_phosphorus = float(_last_soil_data.get("phosphorus", 0))
+        soil_potassium = float(_last_soil_data.get("potassium", 0))
+        npk_line = ""
+        if soil_nitrogen or soil_phosphorus or soil_potassium:
+            npk_line = f"""
+        - Nitrogen (N): {soil_nitrogen} ppm
+        - Phosphorus (P): {soil_phosphorus} ppm
+        - Potassium (K): {soil_potassium} ppm"""
         soil_context = f"""
         Live Soil Sensor Readings (from ESP32-S2):
         - Soil pH: {soil_ph}
-        - Soil Moisture: {soil_moisture}%
+        - Soil Moisture: {soil_moisture}%{npk_line}
         """
 
     recipe_prompt = f"""
@@ -1397,10 +1519,11 @@ def _run_recipe_internal(session_id: str, soil_data: dict = None) -> dict | None
     2. The mix should be effective for the specific disease detected
     3. Consider soil pH when deciding amounts — acidic soil may need less copper fungicide
     4. Consider soil moisture — high moisture may need adjusted concentrations
-    5. If the disease is "Healthy" or "No disease", set all containers to 0
-    6. Water amount should be practical for spraying (500-10000 ml)
-    7. Provide clear step-by-step mixing instructions
-    8. Include safety warnings specific to the chemicals used
+    5. Consider NPK levels if available — nutrient deficiencies may affect treatment strategy
+    6. If the disease is "Healthy" or "No disease", set all containers to 0
+    7. Water amount should be practical for spraying (500-10000 ml)
+    8. Provide clear step-by-step mixing instructions
+    9. Include safety warnings specific to the chemicals used
 
     Return STRICT JSON only (no markdown, no extra text):
     {{
