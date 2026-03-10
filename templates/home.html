@@ -362,6 +362,30 @@
             border-color: rgba(255, 255, 255, .5)
         }
 
+        .btn-install {
+            padding: 15px 34px;
+            font-family: inherit;
+            font-size: 16px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--a5), var(--a6));
+            color: #fff;
+            border: none;
+            border-radius: var(--r);
+            cursor: pointer;
+            transition: .3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 8px 28px rgba(245, 158, 11, .3);
+            animation: pulse 2s ease-in-out infinite
+        }
+
+        .btn-install:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 36px rgba(245, 158, 11, .4);
+            background: linear-gradient(135deg, #f59e0b, #b45309)
+        }
+
         .hero-stats {
             display: flex;
             justify-content: center;
@@ -1221,6 +1245,7 @@
             <a href="#how" class="nav-link" onclick="closeNav()">How It Works</a>
             <a href="#tech" class="nav-link" onclick="closeNav()">Tech</a>
             <a href="#team" class="nav-link" onclick="closeNav()">Team</a>
+            <a href="javascript:void(0)" class="nav-link" onclick="closeNav();installPWA()" style="color:#f59e0b;font-weight:700">📲 Download</a>
             <a href="/login" class="nav-cta">🚜 Get Started</a>
         </div>
     </nav>
@@ -1233,6 +1258,7 @@
             <div class="hero-btns">
                 <a href="/login" class="btn-p">🚜 Launch Dashboard →</a>
                 <a href="#features" class="btn-s">🔬 See How It Works</a>
+                <button id="installBtn" class="btn-install" style="display:none;" onclick="installPWA()">📲 Download App</button>
             </div>
             <div class="hero-stats">
                 <div class="hs">
@@ -1471,6 +1497,7 @@
             <h2 class="stitle">The Future of Farming<br>Is Autonomous</h2>
             <p class="sdesc">Built by Team KAIRO for every Indian farmer — AGRI-SENTINEL autonomously detects crop diseases, mixes precise treatments on-board, and sprays only where needed.</p>
             <a href="/login" class="cta-btn">🌾 Launch Dashboard →</a>
+            <button class="cta-btn install-cta" style="display:none;background:linear-gradient(135deg,#f59e0b,#d97706);margin-top:12px;border:none;cursor:pointer;font-family:inherit;" onclick="installPWA()">📲 Download App</button>
         </div>
     </section>
 
@@ -1483,7 +1510,7 @@
         </div>
         <div class="ft-l">
             <a href="#features">Features</a><a href="#how">How It Works</a><a href="#tech">Tech</a><a href="#team">Team</a>
-            <a href="https://agrobit-forum.vercel.app/" target="_blank">Forum</a><a href="/login">Login</a>
+            <a href="https://agrobit-forum.vercel.app/" target="_blank">Forum</a><a href="/login">Login</a><a href="javascript:void(0)" onclick="installPWA()" style="color:#f59e0b">📲 Download App</a>
         </div>
         <div class="ft-c">© 2026 Team KAIRO — AGRI-SENTINEL. All rights reserved. Patent Pending. 🌾</div>
     </footer>
@@ -1495,6 +1522,44 @@
         document.querySelectorAll('.fc,.hs2,.tp,.sti,.team-card').forEach(e => { e.style.opacity = '0'; obs.observe(e) });
         function toggleNav() { document.getElementById('navRight').classList.toggle('open'); document.getElementById('navOverlay').classList.toggle('open'); document.getElementById('navToggle').textContent = document.getElementById('navRight').classList.contains('open') ? '✕' : '☰'; }
         function closeNav() { document.getElementById('navRight').classList.remove('open'); document.getElementById('navOverlay').classList.remove('open'); document.getElementById('navToggle').textContent = '☰'; }
+
+        /* ═══ PWA Install Prompt ═══ */
+        let deferredPrompt = null;
+        const installBtn = document.getElementById('installBtn');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            if (installBtn) installBtn.style.display = 'inline-flex';
+            document.querySelectorAll('.install-cta').forEach(b => b.style.display = 'inline-flex');
+        });
+
+        function installPWA() {
+            if (!deferredPrompt) {
+                /* Fallback for browsers that don't fire beforeinstallprompt (Safari/iOS) */
+                alert('To install AGRI-SENTINEL:\n\n📱 iPhone/iPad: Tap the Share button (⬆️) → "Add to Home Screen"\n\n📱 Android Chrome: Tap ⋮ menu → "Add to Home Screen" or "Install App"');
+                return;
+            }
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then((result) => {
+                if (result.outcome === 'accepted') {
+                    if (installBtn) installBtn.style.display = 'none';
+                }
+                deferredPrompt = null;
+            });
+        }
+
+        window.addEventListener('appinstalled', () => {
+            if (installBtn) installBtn.style.display = 'none';
+            document.querySelectorAll('.install-cta').forEach(b => b.style.display = 'none');
+            deferredPrompt = null;
+        });
+
+        /* Show button on iOS/Safari where beforeinstallprompt never fires */
+        if (/iPhone|iPad|iPod/.test(navigator.userAgent) && !window.navigator.standalone) {
+            if (installBtn) installBtn.style.display = 'inline-flex';
+            document.querySelectorAll('.install-cta').forEach(b => b.style.display = 'inline-flex');
+        }
     </script>
     <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/static/sw.js').catch(()=>{})}</script>
 </body>

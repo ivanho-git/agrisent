@@ -29,6 +29,10 @@ TOPIC_SOIL_STATUS = "agri/soil/status"
 # Topics — Pump / Mixing (ESP32 → Arduino → L298N + Relay)
 TOPIC_PUMP_MIX = "agri/pump/mix"
 
+# Topics — Bot Command & Status (ESP32-S2 → Arduino 1 Locomotion)
+TOPIC_BOT_COMMAND = "agri/bot/command"
+TOPIC_BOT_STATUS = "agri/bot/status"
+
 # ─── Singleton client ───
 _client: Optional[mqtt.Client] = None
 _connected = False
@@ -53,6 +57,7 @@ def _on_connect(client, userdata, flags, reason_code, properties=None):
         client.subscribe(TOPIC_STATUS, qos=1)
         client.subscribe(TOPIC_SOIL_DATA, qos=1)
         client.subscribe(TOPIC_SOIL_STATUS, qos=1)
+        client.subscribe(TOPIC_BOT_STATUS, qos=1)
     else:
         _connected = False
         logger.warning(f"MQTT connection failed: reason_code={reason_code}")
@@ -196,6 +201,30 @@ def publish_mix_recipe(a_ml: float, b_ml: float, c_ml: float) -> bool:
             return False
     except Exception as e:
         logger.error(f"MQTT mix publish error: {e}")
+        return False
+
+
+def publish_bot_initialize() -> bool:
+    """
+    Publish a MOVE command to the bot command topic.
+    ESP32 receives this and forwards to the locomotion Arduino via serial.
+    Returns True if published, False otherwise.
+    """
+    client = get_client()
+    if client is None:
+        logger.warning("MQTT client not available — cannot publish bot command")
+        return False
+
+    try:
+        result = client.publish(TOPIC_BOT_COMMAND, payload="MOVE", qos=1)
+        if result.rc == mqtt.MQTT_ERR_SUCCESS:
+            logger.info(f"Published MOVE to MQTT topic {TOPIC_BOT_COMMAND}")
+            return True
+        else:
+            logger.error(f"MQTT bot command publish failed: rc={result.rc}")
+            return False
+    except Exception as e:
+        logger.error(f"MQTT bot command publish error: {e}")
         return False
 
 

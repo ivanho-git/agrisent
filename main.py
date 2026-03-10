@@ -2101,6 +2101,38 @@ async def start_mixture_and_spray(request: Request, user: dict = Depends(get_cur
             status_code=500,
         )
 
+# ================= API: INITIALIZE BOT =================
+
+@app.post("/api/initialize-bot")
+async def initialize_bot(request: Request, user: dict = Depends(get_current_user)):
+    """
+    Publish a MOVE command to MQTT topic agri/bot/command.
+    ESP32 receives this and forwards to the locomotion Arduino via serial.
+    """
+    try:
+        published = mqtt_mod.publish_bot_initialize()
+
+        if not published:
+            logger.error("initialize-bot: Failed to publish MOVE command to MQTT")
+            return JSONResponse(
+                {"status": "error", "message": "MQTT publish failed. Check broker connection."},
+                status_code=503,
+            )
+
+        logger.info("Published MOVE command to MQTT topic agri/bot/command")
+
+        return JSONResponse({
+            "status": "ok",
+            "message": "Bot initialized",
+        })
+
+    except Exception as e:
+        logger.error(f"initialize-bot error: {e}")
+        return JSONResponse(
+            {"status": "error", "message": str(e)},
+            status_code=500,
+        )
+
 # ================= API: STORE SOIL DATA (AJAX) =================
 
 @app.post("/api/store-soil")
