@@ -7,6 +7,9 @@
     <title>🌱 AGRI-SENTINEL — Crop Disease Detection</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap"
         rel="stylesheet">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#059669">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
     <style>
         * {
             margin: 0;
@@ -4759,9 +4762,65 @@
             }, 3000);
         }
 
-        /** When BOTH are done, auto-transition to NPK input step */
+        /** When BOTH are done, auto-transition to NPK input step AND populate Phase 2/3 cards */
         function checkBothDone() {
             if (!_soilDone || !_diseaseDone) return;
+
+            // ── Populate Phase 2 environment cards with real IoT data ──
+            const soil = _soilDataForRecipe;
+            const pred = _predictionForRecipe;
+            if (soil) {
+                document.getElementById('moistureValue').textContent = parseFloat(soil.moisture || 0).toFixed(0) + '%';
+                document.getElementById('phValue').textContent = parseFloat(soil.ph || 0).toFixed(1);
+            }
+            // Fetch weather for temperature & humidity
+            authFetch('/api/weather').then(r => r.json()).then(w => {
+                if (w.success && w.weather) {
+                    document.getElementById('tempValue').textContent = w.weather.temperature + '°C';
+                    document.getElementById('humidityValue').textContent = w.weather.humidity + '%';
+                }
+            }).catch(() => {});
+
+            // Populate Phase 2 inventory
+            authFetch('/api/get-inventory', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: appState.sessionId })
+            }).then(r => r.json()).then(d => {
+                if (d.success) {
+                    const c = document.getElementById('inventoryContainer');
+                    c.innerHTML = '';
+                    for (const [id, item] of Object.entries(d.inventory)) {
+                        c.innerHTML += `<div class="inventory-item"><div class="inventory-label"><span>${item.chemical}</span><span>${item.fill_percentage}%</span></div><div class="inventory-bar"><div class="inventory-bar-fill" style="width: ${item.fill_percentage}%"></div></div></div>`;
+                    }
+                }
+            }).catch(() => {});
+
+            // Populate Phase 1 diagnosis results too (for risk analysis & timeline)
+            if (pred) {
+                const confScore = pred.confidence || 0;
+                appState.diagnosisData = {
+                    disease_name: pred.disease || 'Unknown',
+                    confidence_score: confScore,
+                    severity: 'moderate',
+                    disease_description: '',
+                    container_a_ml: pred.container_a_ml || 0,
+                    container_b_ml: pred.container_b_ml || 0,
+                    container_c_ml: pred.container_c_ml || 0,
+                };
+                document.getElementById('diseaseName').textContent = pred.disease || 'Unknown';
+                document.getElementById('mlDisease').textContent = (pred.disease || 'Unknown').toUpperCase();
+                document.getElementById('mlConfidenceBar').style.width = (confScore * 100) + '%';
+                document.getElementById('mlConfidenceBar').textContent = Math.round(confScore * 100) + '%';
+                document.getElementById('summaryDisease').textContent = pred.disease || 'Unknown';
+                document.getElementById('summaryConfidence').textContent = Math.round(confScore * 100) + '%';
+                const cropName = document.getElementById('iotCropSelect') ? document.getElementById('iotCropSelect').value : '';
+                document.getElementById('summaryPlant').textContent = cropName || 'Auto-detected';
+            }
+
+            // Unlock Phase 2
+            document.getElementById('phase2').classList.remove('locked');
+
             // Wait 1.5s so user can see both cards completed
             setTimeout(() => {
                 showNPKStep();
@@ -4815,7 +4874,7 @@
             showRecipeStep();
         }
 
-        /** Populate and show the recipe step */
+        /** Populate and show the recipe step — also fills Phase 2 recipe card & Phase 3 summary */
         function showRecipeStep() {
             setIoTState('stepRecipe');
             const pred = _predictionForRecipe;
@@ -4825,26 +4884,71 @@
             document.getElementById('recipeDisease').textContent = pred ? (pred.disease || 'Unknown') : 'Unknown';
             document.getElementById('recipeSoilSummary').textContent = soil ? (parseFloat(soil.ph||0).toFixed(1) + ' / ' + parseFloat(soil.moisture||0).toFixed(0) + '%') : 'N/A';
 
+            // Container values
+            const cA = recipe ? recipe.container_a_ml : (pred ? pred.container_a_ml : 0);
+            const cB = recipe ? recipe.container_b_ml : (pred ? pred.container_b_ml : 0);
+            const cC = recipe ? recipe.container_c_ml : (pred ? pred.container_c_ml : 0);
+            const water = recipe ? recipe.water_ml : 0;
+            const mixSec = recipe ? recipe.mix_time_seconds : 0;
+
             if (recipe) {
-                document.getElementById('recipeA').textContent = (recipe.container_a_ml || 0) + ' ml';
-                document.getElementById('recipeB').textContent = (recipe.container_b_ml || 0) + ' ml';
-                document.getElementById('recipeC').textContent = (recipe.container_c_ml || 0) + ' ml';
-                document.getElementById('recipeWater').textContent = (recipe.water_ml || 0) + ' ml';
-                const ms = recipe.mix_time_seconds || 0;
+                document.getElementById('recipeA').textContent = (cA || 0) + ' ml';
+                document.getElementById('recipeB').textContent = (cB || 0) + ' ml';
+                document.getElementById('recipeC').textContent = (cC || 0) + ' ml';
+                document.getElementById('recipeWater').textContent = (water || 0) + ' ml';
+                const ms = mixSec || 0;
                 document.getElementById('recipeMixTime').textContent = ms > 60 ? Math.round(ms/60) + ' min' : ms + ' sec';
                 if (recipe.instructions) { document.getElementById('recipeInstructions').textContent = recipe.instructions; document.getElementById('recipeInstrWrap').style.display = 'block'; }
                 if (recipe.safety_notes) { document.getElementById('recipeSafety').textContent = recipe.safety_notes; document.getElementById('recipeSafetyWrap').style.display = 'block'; }
             } else if (pred) {
-                document.getElementById('recipeA').textContent = (pred.container_a_ml || 0) + ' ml';
-                document.getElementById('recipeB').textContent = (pred.container_b_ml || 0) + ' ml';
-                document.getElementById('recipeC').textContent = (pred.container_c_ml || 0) + ' ml';
+                document.getElementById('recipeA').textContent = (cA || 0) + ' ml';
+                document.getElementById('recipeB').textContent = (cB || 0) + ' ml';
+                document.getElementById('recipeC').textContent = (cC || 0) + ' ml';
                 document.getElementById('recipeWater').textContent = '—';
                 document.getElementById('recipeMixTime').textContent = '—';
             }
+
+            // ── Also populate Phase 2 recipe card (the one with phase-section) ──
+            const diseaseName = pred ? (pred.disease || 'Unknown') : 'Unknown';
+            const cropName = document.getElementById('iotCropSelect') ? document.getElementById('iotCropSelect').value : 'Crop';
+            document.getElementById('recipeTitle').textContent = '📝 Treatment for ' + diseaseName;
+
+            const il = document.getElementById('recipeIngredients');
+            il.innerHTML = '';
+            il.innerHTML += `<li>🧪 COPPER FUNGICIDE: ${cA || 0} ml</li>`;
+            il.innerHTML += `<li>🧪 POTASSIUM BICARBONATE: ${cB || 0} ml</li>`;
+            il.innerHTML += `<li>🧪 AZADIRACHTIN: ${cC || 0} ml</li>`;
+            if (water) il.innerHTML += `<li>💧 WATER: ${water} ml</li>`;
+
+            const ml = document.getElementById('mixingSteps');
+            ml.innerHTML = '';
+            if (recipe && recipe.instructions) {
+                const steps = recipe.instructions.split(/\d+\.\s*/g).filter(Boolean);
+                steps.forEach(s => { ml.innerHTML += `<li>${s.trim()}</li>`; });
+            } else {
+                ml.innerHTML = '<li>Add chemicals A, B, C to mixing chamber</li><li>Add water</li><li>Mix for recommended time</li><li>Apply to affected areas</li>';
+            }
+
+            const recipeCard = document.getElementById('recipeCard');
+            recipeCard.classList.add('active');
+            document.getElementById('generateRecipeBtn').textContent = '✓ GENERATED';
+            document.getElementById('generateRecipeBtn').style.background = 'linear-gradient(135deg, var(--green-700) 0%, var(--sun-600) 100%)';
+
+            // ── Populate Phase 3 summary ──
+            document.getElementById('summaryDisease').textContent = diseaseName;
+            document.getElementById('summaryPlant').textContent = cropName || 'Auto-detected';
+            document.getElementById('summaryConfidence').textContent = pred ? Math.round((pred.confidence || 0) * 100) + '%' : '—';
+            let recipeStr = `Copper Fungicide (${cA}ml) + Potassium Bicarbonate (${cB}ml) + Azadirachtin (${cC}ml)`;
+            if (water) recipeStr += ` + Water (${water}ml)`;
+            document.getElementById('summaryRecipe').textContent = recipeStr;
+
+            // Unlock Phase 3
+            document.getElementById('phase3').classList.remove('locked');
+
             showNotification('🧪 RECIPE READY', 'AI treatment recipe generated. Review before spraying.');
         }
 
-        /** Show the consent-to-spray step */
+        /** Show the consent-to-spray step — also scrolls to Phase 3 */
         function showConsentStep() {
             setIoTState('stepConsent');
             const recipe = _recipeDataForConsent;
@@ -4855,17 +4959,74 @@
             document.getElementById('consentA').textContent = 'A: ' + (rA || 0) + ' ml';
             document.getElementById('consentB').textContent = 'B: ' + (rB || 0) + ' ml';
             document.getElementById('consentC').textContent = 'C: ' + (rC || 0) + ' ml';
+
+            // Scroll to Phase 3 so the user sees the full summary + checklist
+            setTimeout(() => {
+                document.getElementById('phase3').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 300);
         }
 
-        /** Start spraying (simulated) */
-        function startSpraying() {
+        /** Start spraying — calls backend MQTT, then runs Phase 3 UI progress */
+        async function startSpraying() {
+            // Disable button to prevent double-clicks
+            const sprayBtn = document.getElementById('sprayBtn');
+            if (sprayBtn) { sprayBtn.disabled = true; sprayBtn.textContent = '⏳ Sending to Robot...'; }
+
+            // ── Call backend to publish recipe via MQTT to ESP32 → Arduino ──
+            try {
+                const resp = await fetch('/api/start-mixture-and-spray', { method: 'POST', credentials: 'same-origin' });
+                const data = await resp.json();
+                if (resp.ok && data.status === 'mixing_started') {
+                    console.log('✅ MQTT recipe published:', data.recipe);
+                    showNotification('📡 SENT', 'Recipe sent to robot — A:' + data.recipe.a_ml + 'ml B:' + data.recipe.b_ml + 'ml C:' + data.recipe.c_ml + 'ml');
+                } else {
+                    console.warn('⚠️ Mixture API warning:', data);
+                    showNotification('⚠️ WARNING', data.message || 'Could not reach robot, but proceeding with UI.');
+                }
+            } catch (err) {
+                console.error('MQTT spray trigger error:', err);
+                showNotification('⚠️ WARNING', 'Network error reaching robot. Proceeding with UI.');
+            }
+
             setIoTState('stepSpraying');
             showNotification('🚀 SPRAYING', 'Robot is mixing chemicals and spraying...');
-            // Simulate spraying duration (8 seconds)
+
+            // Also trigger Phase 3 execution progress
+            document.getElementById('approveBtn').style.display = 'none';
+            document.querySelector('.safety-checklist').style.display = 'none';
+            document.querySelector('.summary-card').style.display = 'none';
+            document.getElementById('executionProgress').classList.add('active');
+
+            const stages = [
+                { id: 'progress1', d: 1500 },
+                { id: 'progress2', d: 2500 },
+                { id: 'progress3', d: 2000 },
+                { id: 'progress4', d: 3000 },
+                { id: 'progress5', d: 1500 }
+            ];
+            let delay = 0;
+            stages.forEach(s => { setTimeout(() => animateBar(s.id, s.d), delay); delay += s.d; });
+
             setTimeout(() => {
+                // Show both IoT done card and Phase 3 completion screen
                 setIoTState('stepDone');
+                document.getElementById('executionProgress').style.display = 'none';
+                document.getElementById('completionScreen').classList.add('active');
+                const now = new Date();
+                document.getElementById('completionTime').textContent = now.toLocaleString();
+                document.getElementById('jobId').textContent = 'TRT-' + now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0') + '-' + String(Math.floor(Math.random() * 1000)).padStart(3, '0');
+
+                const pred = _predictionForRecipe;
+                const recipe = _recipeDataForConsent;
+                const cA = recipe ? recipe.container_a_ml : (pred ? pred.container_a_ml : 0);
+                const cB = recipe ? recipe.container_b_ml : (pred ? pred.container_b_ml : 0);
+                const cC = recipe ? recipe.container_c_ml : (pred ? pred.container_c_ml : 0);
+                const water = recipe ? recipe.water_ml : 10000;
+                document.getElementById('chemicalsUsedList').innerHTML = `<li>• COPPER FUNGICIDE (A): ${cA || 0} ML</li><li>• POTASSIUM BICARB (B): ${cB || 0} ML</li><li>• AZADIRACHTIN (C): ${cC || 0} ML</li><li>• WATER: ${water || 10000} ML</li>`;
+
                 showNotification('✅ COMPLETE', 'Treatment finished successfully!');
-            }, 8000);
+                document.getElementById('completionScreen').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, delay + 500);
         }
 
         /**
@@ -4967,6 +5128,35 @@
             // Show mode toggle
             const toggleBtn = document.getElementById('iotToManualBtn');
             if (toggleBtn) toggleBtn.style.display = '';
+
+            // ── Reset Phase 2 & Phase 3 cards ──
+            document.getElementById('phase2').classList.add('locked');
+            document.getElementById('recipeCard').classList.remove('active');
+            const genBtn = document.getElementById('generateRecipeBtn');
+            genBtn.textContent = '📋 GENERATE TREATMENT RECIPE';
+            genBtn.disabled = false;
+            genBtn.style.background = '';
+
+            document.getElementById('phase3').classList.add('locked');
+            document.getElementById('approveBtn').style.display = '';
+            document.getElementById('approveBtn').disabled = true;
+            document.querySelector('.safety-checklist').style.display = '';
+            document.querySelector('.summary-card').style.display = '';
+            document.querySelectorAll('.safety-checklist input[type="checkbox"]').forEach(c => c.checked = false);
+            document.getElementById('executionProgress').classList.remove('active');
+            document.getElementById('executionProgress').style.display = '';
+            ['progress1','progress2','progress3','progress4','progress5'].forEach(id => {
+                const bar = document.getElementById(id);
+                if (bar) { bar.style.width = '0%'; bar.textContent = '0%'; }
+            });
+            document.getElementById('completionScreen').classList.remove('active');
+
+            // Reset diagnosis results
+            document.getElementById('diagnosisResults').classList.remove('active');
+            appState.diagnosisData = null;
+
+            initializeSession();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         /**
@@ -4996,6 +5186,7 @@
         // ── Run on page load ──
         checkIoTAvailability();
     </script>
+    <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/static/sw.js').catch(()=>{})}</script>
 </body>
 
 </html>

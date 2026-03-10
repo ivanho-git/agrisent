@@ -2037,6 +2037,70 @@ async def generate_recipe(request: Request, user: dict = Depends(get_current_use
     else:
         return JSONResponse({"success": False, "error": "Failed to generate recipe"})
 
+# ================= API: START MIXTURE & SPRAY =================
+
+@app.post("/api/start-mixture-and-spray")
+async def start_mixture_and_spray(request: Request, user: dict = Depends(get_current_user)):
+    """
+    Fetch the latest pesticide recipe from Supabase, publish
+    the raw ml values to MQTT topic agri/pump/mix.
+    ESP32 firmware converts ml → pump runtime, drives peristaltic
+    pumps via Arduino/L298N, then auto-activates the diaphragm spray pump.
+    """
+    try:
+        # Step 1 — Fetch latest recipe from predictions table
+        resp = supabase.table("predictions") \
+            .select("container_a_ml, container_b_ml, container_c_ml") \
+            .order("created_at", desc=True) \
+            .limit(1) \
+            .execute()
+
+        if not resp.data:
+            logger.warning("start-mixture-and-spray: No recipe found in predictions table")
+            return JSONResponse(
+                {"status": "error", "message": "No recipe found. Run analysis first."},
+                status_code=404,
+            )
+
+        row = resp.data[0]
+
+        # Step 2 — Extract required fields
+        a_ml = float(row.get("container_a_ml", 0))
+        b_ml = float(row.get("container_b_ml", 0))
+        c_ml = float(row.get("container_c_ml", 0))
+
+        logger.info(f"Recipe fetched — A: {a_ml} ml, B: {b_ml} ml, C: {c_ml} ml")
+
+        # Step 3 — Publish MQTT message (raw ml values only)
+        published = mqtt_mod.publish_mix_recipe(a_ml, b_ml, c_ml)
+
+        if not published:
+            logger.error("start-mixture-and-spray: Failed to publish recipe to MQTT")
+            return JSONResponse(
+                {"status": "error", "message": "MQTT publish failed. Check broker connection."},
+                status_code=503,
+            )
+
+        # Step 4 — Logging (already done inside publish_mix_recipe, add summary here)
+        logger.info("Published mixing recipe to MQTT topic agri/pump/mix")
+
+        # Step 5 — API Response
+        return JSONResponse({
+            "status": "mixing_started",
+            "recipe": {
+                "a_ml": a_ml,
+                "b_ml": b_ml,
+                "c_ml": c_ml,
+            },
+        })
+
+    except Exception as e:
+        logger.error(f"start-mixture-and-spray error: {e}")
+        return JSONResponse(
+            {"status": "error", "message": str(e)},
+            status_code=500,
+        )
+
 # ================= API: STORE SOIL DATA (AJAX) =================
 
 @app.post("/api/store-soil")

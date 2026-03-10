@@ -7,6 +7,9 @@
     <title>🎤 Market Help — AGRI-SENTINEL</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap"
         rel="stylesheet">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#059669">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
     <style>
         * {
             margin: 0;
@@ -747,6 +750,7 @@
         inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendText() } });
         async function logout() { try { const r = await fetch('/api/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' } }); const d = await r.json(); if (d.success) window.location.href = d.redirect } catch (e) { window.location.href = '/login' } }
     </script>
+    <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/static/sw.js').catch(()=>{})}</script>
 </body>
 
 </html>

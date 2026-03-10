@@ -26,6 +26,9 @@ TOPIC_SOIL_TRIGGER = "agri/soil/trigger"
 TOPIC_SOIL_DATA = "agri/soil/data"
 TOPIC_SOIL_STATUS = "agri/soil/status"
 
+# Topics — Pump / Mixing (ESP32 → Arduino → L298N + Relay)
+TOPIC_PUMP_MIX = "agri/pump/mix"
+
 # ─── Singleton client ───
 _client: Optional[mqtt.Client] = None
 _connected = False
@@ -166,6 +169,33 @@ def publish_soil_trigger() -> bool:
             return False
     except Exception as e:
         logger.error(f"MQTT soil publish error: {e}")
+        return False
+
+
+def publish_mix_recipe(a_ml: float, b_ml: float, c_ml: float) -> bool:
+    """
+    Publish a mixing recipe to the pump topic.
+    ESP32 receives this and converts ml values to pump runtimes.
+    After mixing, Arduino activates the diaphragm spray pump automatically.
+    Returns True if published, False otherwise.
+    """
+    client = get_client()
+    if client is None:
+        logger.warning("MQTT client not available — cannot publish mix recipe")
+        return False
+
+    try:
+        import json
+        payload = json.dumps({"a_ml": a_ml, "b_ml": b_ml, "c_ml": c_ml})
+        result = client.publish(TOPIC_PUMP_MIX, payload=payload, qos=1)
+        if result.rc == mqtt.MQTT_ERR_SUCCESS:
+            logger.info(f"Published mixing recipe to MQTT topic {TOPIC_PUMP_MIX}: {payload}")
+            return True
+        else:
+            logger.error(f"MQTT mix publish failed: rc={result.rc}")
+            return False
+    except Exception as e:
+        logger.error(f"MQTT mix publish error: {e}")
         return False
 
 

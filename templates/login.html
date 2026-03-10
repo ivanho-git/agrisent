@@ -7,6 +7,9 @@
     <title>🌱 AGRI-SENTINEL — Farmer Login</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap"
         rel="stylesheet">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#059669">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
     <style>
         * {
             margin: 0;
@@ -744,6 +747,7 @@
         async function handleLogin(e) { e.preventDefault(); const phone = document.getElementById('phoneInput').value; const btn = document.getElementById('loginBtn'); document.getElementById('errAlert').classList.remove('show'); document.getElementById('okAlert').classList.remove('show'); if (!/^[0-9]{10}$/.test(phone)) { showErr('Please enter a valid 10-digit number'); return } btn.classList.add('loading'); btn.disabled = true; try { const res = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone_number: phone }) }); const data = await res.json(); if (res.ok && data.success) { showOk(data.message + ' Redirecting...'); setTimeout(() => window.location.href = data.redirect, 800) } else throw new Error(data.detail || 'Login failed') } catch (err) { showErr(err.message || 'Something went wrong'); btn.classList.remove('loading'); btn.disabled = false } }
         document.getElementById('phoneInput').addEventListener('input', function () { this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10) });
     </script>
+    <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/static/sw.js').catch(()=>{})}</script>
 </body>
 
 </html>

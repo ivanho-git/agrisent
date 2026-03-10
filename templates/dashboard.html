@@ -7,6 +7,9 @@
     <title>🌱 AGRI-SENTINEL — Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap"
         rel="stylesheet">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#059669">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
     <style>
         * {
             margin: 0;
@@ -1279,6 +1282,7 @@
         loadStats();
         loadSoilData();
     </script>
+    <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/static/sw.js').catch(()=>{})}</script>
 </body>
 
 </html>

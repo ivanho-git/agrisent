@@ -9,6 +9,9 @@
         content="Autonomous AI-powered agricultural robot for real-time crop disease detection, on-site chemical mixing, and precision pesticide spraying — built for Indian farmers.">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap"
         rel="stylesheet">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#059669">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
     <style>
         * {
             margin: 0;
@@ -1493,6 +1496,7 @@
         function toggleNav() { document.getElementById('navRight').classList.toggle('open'); document.getElementById('navOverlay').classList.toggle('open'); document.getElementById('navToggle').textContent = document.getElementById('navRight').classList.contains('open') ? '✕' : '☰'; }
         function closeNav() { document.getElementById('navRight').classList.remove('open'); document.getElementById('navOverlay').classList.remove('open'); document.getElementById('navToggle').textContent = '☰'; }
     </script>
+    <script>if('serviceWorker' in navigator){navigator.serviceWorker.register('/static/sw.js').catch(()=>{})}</script>
 </body>
 
 </html>
