@@ -16,6 +16,8 @@ import os
 from datetime import datetime
 import uuid
 import math
+import threading
+import time as _time
 
 # Load .env file for local development
 from dotenv import load_dotenv
@@ -142,7 +144,7 @@ async def _seed_soil_data_if_empty():
             return
 
         logger.info("soil_logs table is empty — seeding with realistic mock sensor data")
-        device_id = "agri_sentinel_bot_01"
+        device_id = "esp32_s2_soil_1"
 
         # Generate 5 historical readings with slight variation
         # Simulates sensor readings taken over the past few hours
@@ -413,6 +415,8 @@ _last_esp32_image_time: Optional[str] = None
 # Store latest soil sensor data received via MQTT from ESP32-S2
 _last_soil_data: Optional[dict] = None
 _last_soil_time: Optional[str] = None
+# Flag: True while waiting for fresh soil data (mock thread or real MQTT)
+_soil_fetch_pending: bool = False
 
 # ================= LANDING PAGE =================
 
@@ -1023,58 +1027,66 @@ async def init_session(request: Request, user: dict = Depends(get_current_user))
 
 def _generate_and_store_mock_soil(user_id: str):
     """
-    Generate realistic-looking soil sensor data (as if read from ESP32-S2
-    pH + moisture sensors) and store it in Supabase soil_logs.
-    Also updates in-memory state so the frontend polling picks it up immediately.
+    Spawn a background thread that waits 3-5 seconds (simulating the real
+    ESP32-S2 sensor read + MQTT publish latency), then generates realistic
+    soil sensor data and stores it in both in-memory state and Supabase.
 
-    Realistic ranges for Indian agricultural soil:
-      - pH: 5.5 – 7.8  (slightly acidic to slightly alkaline)
-      - Moisture: 25% – 75%  (varies with irrigation)
-      - Nitrogen: 180 – 350 kg/ha  (converted to ppm-like values 20-80)
-      - Phosphorus: 10 – 50 ppm
-      - Potassium: 80 – 280 ppm
+    The frontend polls /api/soil-latest every 3s. During the delay it will
+    see has_data=False and keep showing the loading spinner ("Fetching soil
+    data from sensors..."). After the delay the data appears — exactly like
+    the real sensor pipeline.
     """
-    global _last_soil_data, _last_soil_time
+    def _delayed_mock():
+        global _last_soil_data, _last_soil_time, _soil_fetch_pending
 
-    # Generate realistic values with slight random variation
-    ph = round(random.uniform(5.8, 7.5), 2)
-    moisture = round(random.uniform(28.0, 68.0), 1)
-    nitrogen = round(random.uniform(22.0, 75.0), 1)
-    phosphorus = round(random.uniform(12.0, 48.0), 1)
-    potassium = round(random.uniform(85.0, 260.0), 1)
+        # ── Simulate sensor read latency (ESP32-S2 takes ~3-5s) ──
+        delay_secs = random.uniform(3.0, 5.0)
+        logger.info(f"Mock soil: simulating {delay_secs:.1f}s sensor read delay...")
+        _time.sleep(delay_secs)
 
-    device_id = "agri_sentinel_bot_01"
+        # Realistic ranges for Indian agricultural soil
+        ph = round(random.uniform(5.8, 7.5), 2)
+        moisture = round(random.uniform(28.0, 68.0), 1)
+        nitrogen = round(random.uniform(22.0, 75.0), 1)
+        phosphorus = round(random.uniform(12.0, 48.0), 1)
+        potassium = round(random.uniform(85.0, 260.0), 1)
+        device_id = "esp32_s2_soil_1"
 
-    # Update in-memory state for fast frontend polling
-    _last_soil_data = {
-        "ph": ph,
-        "moisture": moisture,
-        "nitrogen": nitrogen,
-        "phosphorus": phosphorus,
-        "potassium": potassium,
-        "device_id": device_id,
-    }
-    _last_soil_time = datetime.utcnow().isoformat()
-
-    # Persist to Supabase soil_logs
-    try:
-        row = {
-            "device_id": device_id,
-            "moisture": moisture,
+        # Update in-memory state so /api/soil-latest returns it
+        _last_soil_data = {
             "ph": ph,
+            "moisture": moisture,
             "nitrogen": nitrogen,
             "phosphorus": phosphorus,
             "potassium": potassium,
+            "device_id": device_id,
         }
-        if user_id:
-            row["user_id"] = user_id
-        supabase.table("soil_logs").insert(row).execute()
-        logger.info(
-            f"Mock soil data stored: pH={ph}, moisture={moisture}%, "
-            f"N={nitrogen}, P={phosphorus}, K={potassium} (user={user_id})"
-        )
-    except Exception as e:
-        logger.error(f"Failed to store mock soil data: {e}")
+        _last_soil_time = datetime.utcnow().isoformat()
+
+        # Persist to Supabase soil_logs (same table real sensors would write to)
+        try:
+            row = {
+                "device_id": device_id,
+                "moisture": moisture,
+                "ph": ph,
+                "nitrogen": nitrogen,
+                "phosphorus": phosphorus,
+                "potassium": potassium,
+            }
+            if user_id:
+                row["user_id"] = user_id
+            supabase.table("soil_logs").insert(row).execute()
+            logger.info(
+                f"Mock soil data stored: pH={ph}, moisture={moisture}%, "
+                f"N={nitrogen}, P={phosphorus}, K={potassium} (user={user_id})"
+            )
+        except Exception as e:
+            logger.error(f"Failed to store mock soil data: {e}")
+        finally:
+            _soil_fetch_pending = False
+
+    thread = threading.Thread(target=_delayed_mock, daemon=True)
+    thread.start()
 
 
 # ================= API: IOT — INIT ANALYSIS (MQTT TRIGGER) =================
@@ -1089,13 +1101,14 @@ async def init_analysis(request: Request, user: dict = Depends(get_current_user)
     and stores it in Supabase so the frontend displays real-looking values.
     Accepts optional crop_name in body to update the farmer's crop before analysis.
     """
-    global _last_iot_trigger_user, _last_soil_data, _last_soil_time
+    global _last_iot_trigger_user, _last_soil_data, _last_soil_time, _soil_fetch_pending
     user_id = user["id"]
     _last_iot_trigger_user = user_id
 
     # Clear stale soil data so frontend can poll for fresh reading
     _last_soil_data = None
     _last_soil_time = None
+    _soil_fetch_pending = True
 
     # ── Update crop_name if provided ──
     try:
@@ -1236,7 +1249,7 @@ async def soil_latest(request: Request, after: str = None):
     if not user_id:
         return JSONResponse({"success": False, "error": "Not authenticated"}, status_code=401)
 
-    # Return fresh in-memory data if available (set by MQTT callback)
+    # Return fresh in-memory data if available (set by MQTT callback or mock generator)
     if _last_soil_data and _last_soil_time:
         # If 'after' specified, only return if soil data is newer
         if after and _last_soil_time <= after:
@@ -1248,6 +1261,11 @@ async def soil_latest(request: Request, after: str = None):
                 "soil": _last_soil_data,
                 "received_at": _last_soil_time
             })
+
+    # If soil fetch is pending (mock thread or real MQTT), don't return stale DB data
+    # — the frontend should keep showing the loading spinner until fresh data arrives
+    if _soil_fetch_pending:
+        return JSONResponse({"success": True, "has_data": False, "soil": None})
 
     # Fallback: query Supabase for most recent entry for this user
     try:
