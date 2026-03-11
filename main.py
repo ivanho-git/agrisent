@@ -132,57 +132,9 @@ def _handle_soil_data(data: dict):
         logger.error(f"Soil data handler error: {e}")
 
 async def _seed_soil_data_if_empty():
-    """
-    Seed the soil_logs table with realistic mock sensor data if it's empty.
-    This ensures the dashboard and scan pages always display soil data
-    even when the ESP32-S2 hardware is unavailable.
-    """
-    try:
-        existing = supabase.table("soil_logs").select("id").limit(1).execute()
-        if existing.data and len(existing.data) > 0:
-            logger.info("soil_logs table already has data — skipping seed")
-            return
-
-        logger.info("soil_logs table is empty — seeding with realistic mock sensor data")
-        device_id = "esp32_s2_soil_1"
-
-        # Generate 5 historical readings with slight variation
-        # Simulates sensor readings taken over the past few hours
-        seed_rows = []
-        base_ph = random.uniform(6.0, 7.2)
-        base_moisture = random.uniform(35.0, 55.0)
-        base_n = random.uniform(30.0, 60.0)
-        base_p = random.uniform(15.0, 40.0)
-        base_k = random.uniform(100.0, 220.0)
-
-        for i in range(5):
-            seed_rows.append({
-                "device_id": device_id,
-                "ph": round(base_ph + random.uniform(-0.3, 0.3), 2),
-                "moisture": round(base_moisture + random.uniform(-5.0, 5.0), 1),
-                "nitrogen": round(base_n + random.uniform(-5.0, 5.0), 1),
-                "phosphorus": round(base_p + random.uniform(-3.0, 3.0), 1),
-                "potassium": round(base_k + random.uniform(-15.0, 15.0), 1),
-            })
-
-        supabase.table("soil_logs").insert(seed_rows).execute()
-        logger.info(f"Seeded {len(seed_rows)} mock soil log entries into soil_logs")
-
-        # Also set in-memory state so immediate dashboard loads see data
-        global _last_soil_data, _last_soil_time
-        latest = seed_rows[-1]
-        _last_soil_data = {
-            "ph": latest["ph"],
-            "moisture": latest["moisture"],
-            "nitrogen": latest["nitrogen"],
-            "phosphorus": latest["phosphorus"],
-            "potassium": latest["potassium"],
-            "device_id": device_id,
-        }
-        _last_soil_time = datetime.utcnow().isoformat()
-
-    except Exception as e:
-        logger.warning(f"Soil data seeding failed (non-critical): {e}")
+    """No-op — mock soil data is generated on-demand during analysis.
+    NPK values are entered manually by the farmer."""
+    pass
 
 @app.on_event("startup")
 async def startup_mqtt():
@@ -193,9 +145,6 @@ async def startup_mqtt():
         logger.info("MQTT client initialized at startup (camera + soil)")
     else:
         logger.info("MQTT not configured — skipping IoT initialization")
-
-    # Seed soil_logs with realistic mock data if table is empty
-    await _seed_soil_data_if_empty()
 
 @app.on_event("shutdown")
 async def shutdown_mqtt():
@@ -1044,41 +993,39 @@ def _generate_and_store_mock_soil(user_id: str):
         logger.info(f"Mock soil: simulating {delay_secs:.1f}s sensor read delay...")
         _time.sleep(delay_secs)
 
-        # Realistic ranges for Indian agricultural soil
+        # Only pH and moisture come from sensors — NPK is entered manually by farmer
         ph = round(random.uniform(5.8, 7.5), 2)
         moisture = round(random.uniform(28.0, 68.0), 1)
-        nitrogen = round(random.uniform(22.0, 75.0), 1)
-        phosphorus = round(random.uniform(12.0, 48.0), 1)
-        potassium = round(random.uniform(85.0, 260.0), 1)
-        device_id = "esp32_s2_soil_1"
+        device_id = "BOT_01"
 
         # Update in-memory state so /api/soil-latest returns it
         _last_soil_data = {
             "ph": ph,
             "moisture": moisture,
-            "nitrogen": nitrogen,
-            "phosphorus": phosphorus,
-            "potassium": potassium,
+            "nitrogen": 0,
+            "phosphorus": 0,
+            "potassium": 0,
             "device_id": device_id,
         }
         _last_soil_time = datetime.utcnow().isoformat()
 
         # Persist to Supabase soil_logs (same table real sensors would write to)
+        # NPK = 0 — farmer will update them manually via /api/soil-npk
         try:
             row = {
                 "device_id": device_id,
                 "moisture": moisture,
                 "ph": ph,
-                "nitrogen": nitrogen,
-                "phosphorus": phosphorus,
-                "potassium": potassium,
+                "nitrogen": 0,
+                "phosphorus": 0,
+                "potassium": 0,
             }
             if user_id:
                 row["user_id"] = user_id
             supabase.table("soil_logs").insert(row).execute()
             logger.info(
-                f"Mock soil data stored: pH={ph}, moisture={moisture}%, "
-                f"N={nitrogen}, P={phosphorus}, K={potassium} (user={user_id})"
+                f"Mock soil sensor data stored: pH={ph}, moisture={moisture}% "
+                f"(NPK=manual, user={user_id})"
             )
         except Exception as e:
             logger.error(f"Failed to store mock soil data: {e}")
@@ -1334,7 +1281,7 @@ async def soil_npk_input(request: Request):
         else:
             # No sensor data yet — create a row with only NPK
             supabase.table("soil_logs").insert({
-                "device_id": "manual_npk",
+                "device_id": "BOT_01",
                 "user_id": user_id,
                 "moisture": 0,
                 "ph": 0,
