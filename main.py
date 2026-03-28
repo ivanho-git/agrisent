@@ -2149,6 +2149,13 @@ async def start_mixture_and_spray(request: Request, user: dict = Depends(get_cur
         # Step 3 — Mark recipe as approved so the bridge script can pick it up
         logger.info("Recipe approved by farmer — bridge script can now poll /api/latest-recipe")
 
+        # Step 3b — Publish MQTT approval trigger for ESP32 Brain (brainnn.ino)
+        try:
+            mqtt_mod.publish_recipe_approved()
+            logger.info("Published recipe approval to MQTT for ESP32")
+        except Exception as mqtt_err:
+            logger.warning(f"MQTT recipe approval publish failed: {mqtt_err}")
+
         # Step 4 — API Response
         return JSONResponse({
             "status": "mixing_started",
@@ -2161,6 +2168,49 @@ async def start_mixture_and_spray(request: Request, user: dict = Depends(get_cur
 
     except Exception as e:
         logger.error(f"start-mixture-and-spray error: {e}")
+        return JSONResponse(
+            {"status": "error", "message": str(e)},
+            status_code=500,
+        )
+
+# ================= API: APPROVED RECIPE (ESP32 POLLING) =================
+
+@app.get("/api/approved-recipe")
+async def approved_recipe():
+    """
+    Endpoint for ESP32 Brain (brainnn.ino) to fetch approved recipe.
+    Returns recipe with status='approved' and container_a_ml, container_b_ml, container_c_ml keys
+    as expected by the ESP32 firmware.
+    """
+    try:
+        logger.info("ESP32 requested approved recipe")
+
+        resp = supabase.table("predictions") \
+            .select("container_a_ml, container_b_ml, container_c_ml") \
+            .order("created_at", desc=True) \
+            .limit(1) \
+            .execute()
+
+        if not resp.data:
+            logger.warning("approved-recipe: No recipe found in predictions table")
+            return JSONResponse({"status": "no_recipe_available"})
+
+        row = resp.data[0]
+        a_ml = int(row.get("container_a_ml", 10))
+        b_ml = int(row.get("container_b_ml", 20))
+        c_ml = int(row.get("container_c_ml", 30))
+
+        logger.info(f"Serving approved recipe to ESP32 — A: {a_ml} ml, B: {b_ml} ml, C: {c_ml} ml")
+
+        return JSONResponse({
+            "status": "approved",
+            "container_a_ml": a_ml,
+            "container_b_ml": b_ml,
+            "container_c_ml": c_ml,
+        })
+
+    except Exception as e:
+        logger.error(f"approved-recipe error: {e}")
         return JSONResponse(
             {"status": "error", "message": str(e)},
             status_code=500,

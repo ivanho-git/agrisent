@@ -29,6 +29,9 @@ TOPIC_SOIL_STATUS = "agri/soil/status"
 # Topics — Pump / Mixing (ESP32 → Arduino → L298N + Relay)
 TOPIC_PUMP_MIX = "agri/pump/mix"
 
+# Topics — Recipe Approval (Backend → ESP32 Brain)
+TOPIC_RECIPE_APPROVED = "agri/recipe/approved"
+
 # Topics — Bot Command & Status (ESP32-S2 → Arduino 1 Locomotion)
 TOPIC_BOT_COMMAND = "agri/bot/command"
 TOPIC_BOT_STATUS = "agri/bot/status"
@@ -225,6 +228,30 @@ def publish_bot_initialize() -> bool:
             return False
     except Exception as e:
         logger.error(f"MQTT bot command publish error: {e}")
+        return False
+
+
+def publish_recipe_approved() -> bool:
+    """
+    Publish a recipe approval signal to the ESP32 Brain (brainnn.ino).
+    ESP32 subscribes to TOPIC_RECIPE_APPROVED and triggers pump cycle when received.
+    Returns True if published, False otherwise.
+    """
+    client = get_client()
+    if client is None:
+        logger.warning("MQTT client not available — cannot publish recipe approval")
+        return False
+
+    try:
+        result = client.publish(TOPIC_RECIPE_APPROVED, payload="APPROVED", qos=1)
+        if result.rc == mqtt.MQTT_ERR_SUCCESS:
+            logger.info(f"Published APPROVED to MQTT topic {TOPIC_RECIPE_APPROVED}")
+            return True
+        else:
+            logger.error(f"MQTT recipe approval publish failed: rc={result.rc}")
+            return False
+    except Exception as e:
+        logger.error(f"MQTT recipe approval publish error: {e}")
         return False
 
 
