@@ -938,18 +938,6 @@
         }
 
         @media(max-width:420px) {
-
-            .topbar-nav a,
-            .topbar-nav button {
-                font-size: 12px;
-                padding: 7px 10px;
-                min-height: 38px
-            }
-
-            .topbar-logo {
-                font-size: 13px
-            }
-
             .farm-grid {
                 grid-template-columns: 1fr
             }
@@ -958,19 +946,442 @@
                 grid-template-columns: 1fr
             }
         }
+
+        /* ═══════════════════════════════════════════════════════════════
+           INDUSTRY-GRADE MOBILE PWA NAVIGATION
+           ═══════════════════════════════════════════════════════════════ */
+        
+        /* Desktop: Top navbar visible, bottom nav hidden */
+        @media(min-width:769px) {
+            .mobile-bottom-nav { display: none !important; }
+            .topbar { display: flex; }
+        }
+
+        /* Mobile: Bottom nav visible, top nav simplified */
+        @media(max-width:768px) {
+            .topbar {
+                height: 52px;
+                padding: 0 16px;
+            }
+            .topbar-nav {
+                display: none;
+            }
+            .topbar-logo {
+                font-size: 15px;
+            }
+            .topbar-actions {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .topbar-status {
+                display: flex;
+                align-items: center;
+                gap: 5px;
+                padding: 5px 10px;
+                background: var(--emerald-50);
+                border: 1px solid var(--emerald-200);
+                border-radius: var(--r-full);
+                font-size: 10px;
+                font-weight: 700;
+                color: var(--emerald-700);
+            }
+            .topbar-status .dot {
+                width: 6px;
+                height: 6px;
+                background: var(--emerald-400);
+                border-radius: 50%;
+                animation: pulse 2s infinite;
+            }
+            body {
+                padding-bottom: 80px; /* Space for bottom nav */
+            }
+            .container {
+                padding-bottom: 100px;
+            }
+        }
+
+        /* Mobile Bottom Navigation - iOS/Android Native Feel */
+        .mobile-bottom-nav {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 9999;
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border-top: 1px solid rgba(0,0,0,0.06);
+            padding: 6px 8px calc(env(safe-area-inset-bottom, 8px) + 6px);
+            box-shadow: 0 -4px 30px rgba(0,0,0,0.08);
+        }
+
+        @media(max-width:768px) {
+            .mobile-bottom-nav {
+                display: block;
+            }
+        }
+
+        .bottom-nav-container {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .bottom-nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            padding: 6px 12px;
+            border-radius: 16px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            min-width: 64px;
+            position: relative;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .bottom-nav-item:active {
+            transform: scale(0.92);
+        }
+
+        .bottom-nav-icon {
+            font-size: 22px;
+            line-height: 1;
+            margin-bottom: 2px;
+            transition: transform 0.2s ease;
+        }
+
+        .bottom-nav-label {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--slate-500);
+            letter-spacing: 0.2px;
+            transition: color 0.2s ease;
+        }
+
+        .bottom-nav-item.active {
+            background: linear-gradient(135deg, var(--emerald-50), rgba(16,185,129,0.12));
+        }
+
+        .bottom-nav-item.active .bottom-nav-icon {
+            transform: scale(1.1);
+        }
+
+        .bottom-nav-item.active .bottom-nav-label {
+            color: var(--emerald-700);
+            font-weight: 700;
+        }
+
+        /* Center Scan Button - Prominent FAB Style */
+        .bottom-nav-scan {
+            position: relative;
+            margin-top: -28px;
+        }
+
+        .bottom-nav-scan .scan-btn-wrap {
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--emerald-600), var(--emerald-500));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 20px rgba(5,150,105,0.4), 0 0 0 4px rgba(255,255,255,0.9);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .bottom-nav-scan:active .scan-btn-wrap {
+            transform: scale(0.9);
+            box-shadow: 0 2px 12px rgba(5,150,105,0.3), 0 0 0 4px rgba(255,255,255,0.9);
+        }
+
+        .bottom-nav-scan .bottom-nav-icon {
+            font-size: 26px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+        }
+
+        .bottom-nav-scan .bottom-nav-label {
+            position: absolute;
+            bottom: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: var(--emerald-700);
+            font-weight: 700;
+            font-size: 9px;
+            white-space: nowrap;
+        }
+
+        /* Notification Badge */
+        .nav-badge {
+            position: absolute;
+            top: 2px;
+            right: 8px;
+            min-width: 16px;
+            height: 16px;
+            background: var(--red-500);
+            color: white;
+            font-size: 9px;
+            font-weight: 800;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 4px;
+            box-shadow: 0 2px 6px rgba(239,68,68,0.4);
+        }
+
+        /* Logout in mobile - slide out panel trigger */
+        .mobile-menu-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: var(--slate-100);
+            border: 1px solid var(--slate-200);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .mobile-menu-btn:active {
+            transform: scale(0.92);
+            background: var(--slate-200);
+        }
+
+        /* Mobile Menu Overlay */
+        .mobile-menu-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .mobile-menu-overlay.active {
+            display: block;
+            opacity: 1;
+        }
+
+        .mobile-menu-panel {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: min(300px, 85vw);
+            height: 100%;
+            background: #fff;
+            box-shadow: -8px 0 30px rgba(0,0,0,0.15);
+            transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .mobile-menu-overlay.active .mobile-menu-panel {
+            transform: translateX(0);
+        }
+
+        .mobile-menu-header {
+            padding: 20px;
+            background: linear-gradient(135deg, var(--emerald-900), var(--emerald-700));
+            color: white;
+        }
+
+        .mobile-menu-header h3 {
+            font-size: 18px;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+
+        .mobile-menu-header p {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .mobile-menu-items {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+        }
+
+        .mobile-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 16px;
+            border-radius: 12px;
+            text-decoration: none;
+            color: var(--slate-700);
+            font-size: 15px;
+            font-weight: 600;
+            transition: all 0.2s;
+            margin-bottom: 6px;
+        }
+
+        .mobile-menu-item:active {
+            background: var(--slate-100);
+            transform: scale(0.98);
+        }
+
+        .mobile-menu-item .icon {
+            font-size: 22px;
+        }
+
+        .mobile-menu-item.logout {
+            color: var(--red-500);
+            border-top: 1px solid var(--slate-100);
+            margin-top: auto;
+            padding-top: 16px;
+        }
+
+        .mobile-menu-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Haptic feedback simulation */
+        @keyframes haptic {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(0.97); }
+        }
+
+        /* Pull-to-refresh indicator style */
+        .pull-indicator {
+            position: fixed;
+            top: 52px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100%);
+            background: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--emerald-700);
+            z-index: 999;
+            transition: transform 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pull-indicator.visible {
+            transform: translateX(-50%) translateY(10px);
+        }
     </style>
 </head>
 
 <body>
+    <!-- Top Bar (simplified on mobile) -->
     <header class="topbar">
         <a href="/dashboard" class="topbar-logo">🌱 AGRI-SENTINEL <span class="dot"></span></a>
+        
+        <!-- Desktop Nav -->
         <nav class="topbar-nav">
             <a href="/scan" class="active">🔬 Scan</a>
             <a href="/market-help">🎤 Market</a>
             <a href="/history">📊 History</a>
             <button class="logout" onclick="logout()">🚪</button>
         </nav>
+
+        <!-- Mobile Actions -->
+        <div class="topbar-actions">
+            <div class="topbar-status">
+                <span class="dot"></span>
+                <span>ONLINE</span>
+            </div>
+            <button class="mobile-menu-btn" onclick="openMobileMenu()">☰</button>
+        </div>
     </header>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="mobile-bottom-nav" role="navigation" aria-label="Main navigation">
+        <div class="bottom-nav-container">
+            <a href="/dashboard" class="bottom-nav-item active">
+                <span class="bottom-nav-icon">🏠</span>
+                <span class="bottom-nav-label">Home</span>
+            </a>
+            <a href="/market-help" class="bottom-nav-item">
+                <span class="bottom-nav-icon">🎤</span>
+                <span class="bottom-nav-label">Market</span>
+            </a>
+            <a href="/scan" class="bottom-nav-item bottom-nav-scan">
+                <div class="scan-btn-wrap">
+                    <span class="bottom-nav-icon">🔬</span>
+                </div>
+                <span class="bottom-nav-label">Scan</span>
+            </a>
+            <a href="/history" class="bottom-nav-item">
+                <span class="bottom-nav-icon">📊</span>
+                <span class="bottom-nav-label">History</span>
+            </a>
+            <a href="https://agrobit-forum.vercel.app/" target="_blank" class="bottom-nav-item">
+                <span class="bottom-nav-icon">👥</span>
+                <span class="bottom-nav-label">Forum</span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Mobile Slide-out Menu -->
+    <div class="mobile-menu-overlay" id="mobileMenu" onclick="closeMobileMenu(event)">
+        <div class="mobile-menu-panel" onclick="event.stopPropagation()">
+            <button class="mobile-menu-close" onclick="closeMobileMenu()">✕</button>
+            <div class="mobile-menu-header">
+                <h3>👨‍🌾 {{ profile.farmer_name if profile else 'Farmer' }}</h3>
+                <p>{{ profile.village if profile else '' }}{% if profile and profile.district %}, {{ profile.district }}{% endif %}</p>
+            </div>
+            <div class="mobile-menu-items">
+                <a href="/dashboard" class="mobile-menu-item">
+                    <span class="icon">🏠</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/scan" class="mobile-menu-item">
+                    <span class="icon">🔬</span>
+                    <span>Crop Scan</span>
+                </a>
+                <a href="/market-help" class="mobile-menu-item">
+                    <span class="icon">🎤</span>
+                    <span>Market Assistant</span>
+                </a>
+                <a href="/history" class="mobile-menu-item">
+                    <span class="icon">📊</span>
+                    <span>Scan History</span>
+                </a>
+                <a href="https://agrobit-forum.vercel.app/" target="_blank" class="mobile-menu-item">
+                    <span class="icon">👥</span>
+                    <span>Farmer Forum</span>
+                </a>
+                <div style="flex:1;min-height:20px;"></div>
+                <a href="javascript:void(0)" onclick="logout()" class="mobile-menu-item logout">
+                    <span class="icon">🚪</span>
+                    <span>Logout</span>
+                </a>
+            </div>
+        </div>
+    </div>
 
     <div class="container">
         <div class="welcome">
@@ -1277,6 +1688,50 @@
                 }
             } catch (e) { /* soil data not available yet */ }
         }
+
+        // ═══════════════════════════════════════════════════════════════
+        // MOBILE MENU FUNCTIONS
+        // ═══════════════════════════════════════════════════════════════
+        function openMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            menu.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            // Haptic feedback (if supported)
+            if (navigator.vibrate) navigator.vibrate(10);
+        }
+
+        function closeMobileMenu(event) {
+            if (event && event.target !== event.currentTarget) return;
+            const menu = document.getElementById('mobileMenu');
+            menu.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        // Close menu on escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeMobileMenu();
+        });
+
+        // Add haptic feedback to bottom nav items
+        document.querySelectorAll('.bottom-nav-item').forEach(item => {
+            item.addEventListener('touchstart', () => {
+                if (navigator.vibrate) navigator.vibrate(5);
+            }, { passive: true });
+        });
+
+        // Prevent pull-to-refresh on mobile (for PWA feel)
+        let touchStartY = 0;
+        document.addEventListener('touchstart', (e) => {
+            touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+
+        document.addEventListener('touchmove', (e) => {
+            const touchY = e.touches[0].clientY;
+            const scrollTop = window.scrollY || document.documentElement.scrollTop;
+            if (scrollTop === 0 && touchY > touchStartY) {
+                // User is pulling down at top of page - could show pull indicator
+            }
+        }, { passive: true });
 
         loadWeather();
         loadStats();

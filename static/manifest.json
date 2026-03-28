@@ -1,14 +1,15 @@
 {
   "name": "AGRI-SENTINEL",
   "short_name": "AgriSentinel",
-  "description": "Autonomous AI-Powered Agricultural Robot — Real-time crop disease detection, on-site chemical mixing, and precision spraying for Indian farmers.",
-  "start_url": "/home",
+  "description": "AI-Powered Agricultural Robot — Real-time crop disease detection, on-site chemical mixing, and precision spraying for Indian farmers.",
+  "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",
   "background_color": "#022c22",
   "theme_color": "#059669",
   "orientation": "portrait-primary",
   "categories": ["agriculture", "productivity", "utilities"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/static/icons/icon-192.png",
@@ -24,6 +25,30 @@
     }
   ],
   "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Scan Crop",
+      "short_name": "Scan",
+      "description": "Start AI disease detection",
+      "url": "/scan",
+      "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Market Help",
+      "short_name": "Market",
+      "description": "Voice-powered market assistant",
+      "url": "/market-help",
+      "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Scan History",
+      "short_name": "History",
+      "description": "View past scan results",
+      "url": "/history",
+      "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "related_applications": [],
   "lang": "en",
   "dir": "ltr"
 }

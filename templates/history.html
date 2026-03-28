@@ -474,15 +474,138 @@
         }
 
         @media(max-width:420px) {
-            .topbar-nav a {
-                font-size: 12px;
-                padding: 7px 10px;
-                min-height: 38px
-            }
-
             .topbar-logo {
                 font-size: 13px
             }
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           MOBILE PWA NAVIGATION
+           ═══════════════════════════════════════════════════════════════ */
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+        
+        @media(min-width:769px) {
+            .mobile-bottom-nav { display: none !important; }
+            .topbar-actions { display: none !important; }
+        }
+
+        @media(max-width:768px) {
+            .topbar { height: 52px; }
+            .topbar-nav { display: none; }
+            .topbar-actions {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .topbar-status {
+                display: flex;
+                align-items: center;
+                gap: 5px;
+                padding: 5px 10px;
+                background: var(--emerald-50);
+                border: 1px solid var(--emerald-200);
+                border-radius: var(--r-full);
+                font-size: 10px;
+                font-weight: 700;
+                color: var(--emerald-700);
+            }
+            .topbar-status .dot {
+                width: 6px;
+                height: 6px;
+                background: var(--emerald-400);
+                border-radius: 50%;
+                animation: pulse 2s infinite;
+            }
+            body { padding-bottom: 80px; }
+            .container { padding-bottom: 100px; }
+        }
+
+        .mobile-bottom-nav {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 9999;
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border-top: 1px solid rgba(0,0,0,0.06);
+            padding: 6px 8px calc(env(safe-area-inset-bottom, 8px) + 6px);
+            box-shadow: 0 -4px 30px rgba(0,0,0,0.08);
+        }
+
+        @media(max-width:768px) {
+            .mobile-bottom-nav { display: block; }
+        }
+
+        .bottom-nav-container {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .bottom-nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            padding: 6px 12px;
+            border-radius: 16px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            min-width: 64px;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .bottom-nav-item:active { transform: scale(0.92); }
+
+        .bottom-nav-icon {
+            font-size: 22px;
+            line-height: 1;
+            margin-bottom: 2px;
+        }
+
+        .bottom-nav-label {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--slate-500);
+        }
+
+        .bottom-nav-item.active {
+            background: linear-gradient(135deg, var(--emerald-50), rgba(16,185,129,0.12));
+        }
+
+        .bottom-nav-item.active .bottom-nav-icon { transform: scale(1.1); }
+        .bottom-nav-item.active .bottom-nav-label { color: var(--emerald-700); font-weight: 700; }
+
+        .bottom-nav-scan {
+            position: relative;
+            margin-top: -28px;
+        }
+
+        .bottom-nav-scan .scan-btn-wrap {
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--emerald-600), var(--emerald-500));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 20px rgba(5,150,105,0.4), 0 0 0 4px rgba(255,255,255,0.9);
+        }
+
+        .bottom-nav-scan .bottom-nav-icon { font-size: 26px; }
+        .bottom-nav-scan .bottom-nav-label {
+            position: absolute;
+            bottom: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: var(--emerald-700);
+            font-weight: 700;
+            font-size: 9px;
         }
     </style>
 </head>
@@ -496,7 +619,38 @@
             <a href="/market-help">🎤 Market</a>
             <a href="/history" class="active">📊 History</a>
         </nav>
+        <div class="topbar-actions" style="display:none;">
+            <div class="topbar-status"><span class="dot"></span><span>ONLINE</span></div>
+        </div>
     </header>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="mobile-bottom-nav">
+        <div class="bottom-nav-container">
+            <a href="/dashboard" class="bottom-nav-item">
+                <span class="bottom-nav-icon">🏠</span>
+                <span class="bottom-nav-label">Home</span>
+            </a>
+            <a href="/market-help" class="bottom-nav-item">
+                <span class="bottom-nav-icon">🎤</span>
+                <span class="bottom-nav-label">Market</span>
+            </a>
+            <a href="/scan" class="bottom-nav-item bottom-nav-scan">
+                <div class="scan-btn-wrap">
+                    <span class="bottom-nav-icon">🔬</span>
+                </div>
+                <span class="bottom-nav-label">Scan</span>
+            </a>
+            <a href="/history" class="bottom-nav-item active">
+                <span class="bottom-nav-icon">📊</span>
+                <span class="bottom-nav-label">History</span>
+            </a>
+            <a href="https://agrobit-forum.vercel.app/" target="_blank" class="bottom-nav-item">
+                <span class="bottom-nav-icon">👥</span>
+                <span class="bottom-nav-label">Forum</span>
+            </a>
+        </div>
+    </nav>
 
     <div class="container">
         <div class="page-banner">
